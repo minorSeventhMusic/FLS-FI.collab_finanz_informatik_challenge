@@ -50,7 +50,7 @@ st.markdown("""
     /* ── Section headers (red) ────────────────────────────── */
     .fi-section-header {
         color: var(--fi-red);
-        font-size: 1.8rem;
+        font-size: 3.6rem;
         font-weight: 700;
         margin: 2rem 0 1rem 0;
     }
@@ -58,7 +58,7 @@ st.markdown("""
     /* ── Persona card ─────────────────────────────────────── */
     .fi-persona-name {
         color: var(--fi-red);
-        font-size: 1.5rem;
+        font-size: 3rem;
         font-weight: 700;
         margin: 0;
     }
