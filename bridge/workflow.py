@@ -21,6 +21,7 @@ from bridge.personas import get_persona
 from bridge.persistence import ProjectStateStore
 from bridge.prompts.system import (
     HANDOFF_RESPONSE_PROMPT,
+    INTENT_CLASSIFICATION_PROMPT,
     RESPONSE_SYSTEM_PROMPT,
 )
 from bridge.scenarios import get_scenario
@@ -96,14 +97,20 @@ def _extract_ticket_fields(response: str) -> tuple:
 def _rule_based_intent(message: str) -> Intent:
     """Fast keyword-based intent classification — no LLM needed."""
     lowered = message.lower()
+    # Check TICKET_STATUS first — "show open tickets" should not trigger create
+    if any(w in lowered for w in (
+        "ticket status", "status of", "jira status", "what tickets",
+        "open tickets", "show ticket", "my tickets", "pending ticket",
+        "list ticket", "show me", "which ticket", "assigned to",
+    )):
+        return Intent.TICKET_STATUS
+    # CREATE_TICKET — explicit creation intent only
     if "create" in lowered and "ticket" in lowered:
         return Intent.CREATE_TICKET
-    if any(w in lowered for w in ("open ticket", "raise ticket", "make ticket")):
+    if any(w in lowered for w in ("raise a ticket", "make a ticket", "open a new ticket", "file a ticket")):
         return Intent.CREATE_TICKET
     if any(w in lowered for w in ("update ticket", "change status", "move ticket")):
         return Intent.UPDATE_TICKET
-    if any(w in lowered for w in ("ticket status", "status of", "jira status", "what tickets", "open tickets", "show ticket")):
-        return Intent.TICKET_STATUS
     if any(w in lowered for w in ("mismatch", "discrepancy", "drift", "not matching", "contradiction", "conflict")):
         return Intent.DISCREPANCY_CHECK
     if any(w in lowered for w in ("report", "summary", "alignment overview", "overall")):
@@ -117,7 +124,19 @@ def _rule_based_intent(message: str) -> Intent:
 
 def classify_intent(state: BridgeState) -> Dict[str, Any]:
     _ensure_services()
-    intent = _rule_based_intent(state["user_message"])
+    prompt = INTENT_CLASSIFICATION_PROMPT.format(
+        role=state["role"],
+        user_message=state["user_message"],
+    )
+    raw = _llm.generate(prompt, state["user_message"])
+    raw_clean = raw.strip().lower().replace(" ", "_")
+
+    try:
+        intent = Intent(raw_clean)
+    except ValueError:
+        # LLM returned something unexpected — fall back to rule-based
+        intent = _rule_based_intent(state["user_message"])
+
     return {"intent": intent.value}
 
 
