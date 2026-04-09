@@ -153,14 +153,13 @@ _logo_path = Path(__file__).parent / "personas_pictures" / "Sparkasse.svg"
 _logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode()
 
 st.markdown(
-    f'<div style="display: flex; align-items: center; gap: 0.5rem;">'
-    f'<img src="data:image/svg+xml;base64,{_logo_b64}" style="height: 2.2rem;">'
-    f'<span style="color: #e30613; font-size: 1.4rem;">FI.<span style="font-weight: 700;">collab</span></span>'
+    f'<div style="display: flex; align-items: center; gap: 0.75rem;">'
+    f'<img src="data:image/svg+xml;base64,{_logo_b64}" style="height: 3.2rem;">'
+    f'<div>'
+    f'<div style="color: #e30613; font-size: 1.4rem; line-height: 1.3;">FI.<span style="font-weight: 700;">collab</span></div>'
+    f'<div style="color: #6c757d; font-size: 0.95rem; line-height: 1.3;">Collaborative AI for business-technical alignment | <strong style="color: #1a1a1a;">finanz informatik</strong></div>'
+    f'</div>'
     f'</div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<p class="fi-subtitle">Collaborative AI for business-technical alignment | <strong>finanz informatik</strong></p>',
     unsafe_allow_html=True,
 )
 

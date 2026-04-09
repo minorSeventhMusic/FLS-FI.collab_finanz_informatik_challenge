@@ -255,17 +255,7 @@ if st.session_state.last_result:
 
 # ── Main Chat Area ───────────────────────────────────────────────────────
 
-import base64
-from pathlib import Path
-_logo_path = Path(__file__).parent.parent / "personas_pictures" / "Sparkasse.svg"
-_logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode()
-st.markdown(
-    f'<div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">'
-    f'<img src="data:image/svg+xml;base64,{_logo_b64}" style="height: 2.5rem;">'
-    f'<span style="color: #e30613; font-size: 2.5rem; font-weight: 700;">Chat</span>'
-    f'</div>',
-    unsafe_allow_html=True,
-)
+st.markdown('<div style="color: #e30613; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">Chat</div>', unsafe_allow_html=True)
 
 # Show active context
 active_key = st.session_state.active_ticket_key
