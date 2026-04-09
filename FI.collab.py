@@ -154,7 +154,7 @@ _logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode()
 
 st.markdown(
     f'<div style="display: flex; align-items: center; gap: 0.5rem;">'
-    f'<img src="data:image/svg+xml;base64,{_logo_b64}" style="height: 1.6rem;">'
+    f'<img src="data:image/svg+xml;base64,{_logo_b64}" style="height: 2.2rem;">'
     f'<span style="color: #e30613; font-size: 1.4rem;">FI.<span style="font-weight: 700;">collab</span></span>'
     f'</div>',
     unsafe_allow_html=True,
