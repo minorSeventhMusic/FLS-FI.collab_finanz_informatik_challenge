@@ -168,7 +168,6 @@ with st.container(border=True):
         st.caption("Customer-facing loan calculator with 0% APR promotional support")
         st.caption("Alignment: Critical gaps detected | Open tickets: JIRA-104")
     with proj_col2:
-        st.markdown("[\U0001f4ac Open in Chat](./Chat)")
-
-st.markdown("---")
-st.caption("Navigate to **Chat**, **Dashboard**, or **Reports** in the sidebar.")
+        if st.button("\U0001f4ac Open in Chat", use_container_width=True):
+            st.session_state["selected_landing_role"] = selected_label
+            st.switch_page("pages/1_Chat.py")
