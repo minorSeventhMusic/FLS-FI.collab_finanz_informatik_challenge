@@ -250,7 +250,7 @@ if selected_label != "Select your role...":
 
     if _urgent:
         st.markdown(
-            '<div style="color: #e30613; font-size: 1.8rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2;">Urgent</div>',
+            '<div style="color: #e30613; font-size: 1.8rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2;">Action required</div>',
             unsafe_allow_html=True,
         )
         for t in _urgent:
@@ -263,4 +263,14 @@ if selected_label != "Select your role...":
                     if st.button("Open in Chat", key=f"urgent-{t.key}", use_container_width=True):
                         st.session_state["selected_landing_role"] = selected_label
                         st.session_state["active_ticket_key"] = t.key
+                        st.session_state["messages"] = [{
+                            "kind": "assistant",
+                            "content": (
+                                f"**{t.key}**: {t.title}\n\n"
+                                f"- **Status:** {t.status}\n"
+                                f"- **Priority:** {t.priority}\n"
+                                f"- **Assignee:** {t.assignee or 'Unassigned'}"
+                            ),
+                        }]
+                        st.session_state["pending_resume"] = False
                         st.switch_page("pages/1_Chat.py")
