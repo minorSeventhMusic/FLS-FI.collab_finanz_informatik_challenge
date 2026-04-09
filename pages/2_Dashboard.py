@@ -13,7 +13,7 @@ from bridge.models import Intent, Role
 from bridge.persistence import ProjectStateStore
 from bridge.scenarios import get_scenario
 
-st.set_page_config(page_title="The Bridge — Dashboard", page_icon="\U0001f309", layout="wide")
+st.set_page_config(page_title="FI-Collab — Dashboard", page_icon="\U0001f534", layout="wide")
 
 # ── Initialize ───────────────────────────────────────────────────────────
 

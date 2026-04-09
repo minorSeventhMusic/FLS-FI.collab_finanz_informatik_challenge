@@ -14,7 +14,7 @@ from bridge.scenarios import get_scenario
 
 
 REPORT_SYSTEM = (
-    "You are a professional report writer for The Bridge. "
+    "You are a professional report writer for FI-Collab. "
     "Generate clear, structured reports adapted to the recipient's role."
 )
 

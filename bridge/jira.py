@@ -57,7 +57,7 @@ class JiraAdapter:
             counter += 1
             key = f"JIRA-{counter}"
 
-        history = ["Created by The Bridge"]
+        history = ["Created by FI-Collab"]
         if reporter:
             history.append(f"Reporter: {reporter}")
         if component:

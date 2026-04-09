@@ -17,7 +17,7 @@ from bridge.workflow import compile_workflow, init_services
 
 # ── Initialize ───────────────────────────────────────────────────────────
 
-st.set_page_config(page_title="The Bridge — Chat", page_icon="\U0001f309", layout="wide")
+st.set_page_config(page_title="FI-Collab — Chat", page_icon="\U0001f534", layout="wide")
 
 if "store" not in st.session_state:
     st.session_state.store = ProjectStateStore()
@@ -89,7 +89,7 @@ def _run_turn(prompt_text: str):
 
     # Show spinner inside the assistant bubble, then the response
     with st.chat_message("assistant"):
-        with st.spinner("The Bridge is thinking..."):
+        with st.spinner("FI-Collab is thinking..."):
             result = workflow.invoke({
                 "user_message": prompt_text,
                 "role": role.value,
@@ -126,7 +126,7 @@ def _run_turn(prompt_text: str):
 
 # ── Sidebar ──────────────────────────────────────────────────────────────
 
-st.sidebar.title("\U0001f309 The Bridge")
+st.sidebar.title("\u25C6 FI-Collab")
 st.sidebar.markdown("---")
 
 # Role selector — pick up landing page selection if available
@@ -143,7 +143,7 @@ role_label = st.sidebar.selectbox(
     "Select Role (Mock SSO)",
     _role_names,
     index=_default_idx,
-    help="Simulates single sign-on. The Bridge adapts its responses to your role.",
+    help="Simulates single sign-on. FI-Collab adapts its responses to your role.",
 )
 role = _role_options[role_label]
 
