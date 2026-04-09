@@ -1,8 +1,10 @@
 import importlib
 import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from calculator import calculate_monthly_payment
 
@@ -10,11 +12,21 @@ APP_NAME = "fls_bridge_challenge"
 USER_ID = "local_user"
 
 
+def _now_in_app_timezone():
+    """Return current datetime in configured app timezone (default Europe/Berlin)."""
+    tz_name = os.getenv("APP_TIMEZONE", "Europe/Berlin")
+    try:
+        return datetime.now(ZoneInfo(tz_name))
+    except Exception:
+        # Fallback to system local time if timezone configuration is invalid.
+        return datetime.now().astimezone()
+
+
 def _write_ticket_markdown(ticket_text, error_text):
     """Write one Jira ticket, capping total files at 3 by overwriting the oldest."""
-    now = datetime.now()
-    generated_at = now.strftime("%Y-%m-%d %H:%M:%S")
-    timestamp_for_name = now.strftime("%Y%m%d_%H%M%S_%f")[:-3]
+    now = _now_in_app_timezone()
+    generated_at = now.strftime("%Y-%m-%d-%H%M")
+    timestamp_for_name = generated_at
 
     base_dir = Path(__file__).parent
     existing = sorted(
@@ -22,11 +34,16 @@ def _write_ticket_markdown(ticket_text, error_text):
         key=lambda p: p.stat().st_mtime,
     )
 
-    # Keep at most 3 files total: create new if under limit, else overwrite oldest.
+    # Keep at most 3 files total: create new if under limit, else replace oldest.
     if len(existing) < 3:
         ticket_file = base_dir / f"jira_ticket_{timestamp_for_name}.md"
     else:
-        ticket_file = existing[0]
+        oldest = existing[0]
+        try:
+            oldest.unlink()
+        except OSError:
+            pass
+        ticket_file = base_dir / f"jira_ticket_{timestamp_for_name}.md"
 
     content = (
         "# Jira Ticket\n\n"
@@ -41,7 +58,7 @@ def _write_ticket_markdown(ticket_text, error_text):
     return ticket_file
 
 
-def _write_fix_summary_markdown(ticket_text, customer_message, ticket_path):
+def _write_fix_summary_markdown(ticket_text, customer_message, ticket_path, error_text):
     """Create an easy-language summary markdown from Jira acceptance criteria."""
     criteria = _extract_acceptance_criteria(ticket_text)
     subject = _extract_jira_title(ticket_text)
@@ -63,6 +80,8 @@ def _write_fix_summary_markdown(ticket_text, customer_message, ticket_path):
 
     content = (
         f"# {subject}\n\n"
+        "## Error Description\n\n"
+        f"- {error_text}\n\n"
         f"{message_body}\n\n"
         "## What Was Fixed\n\n"
         f"{criteria_lines}\n"
@@ -85,101 +104,103 @@ def _load_calculator_source():
     return calculator_file.read_text(encoding="utf-8")
 
 
+def _extract_validation_rules(source_text):
+    """Extract ValueError validation rules from calculator source code."""
+    rules = []
+    lines = source_text.splitlines()
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+
+        if stripped.startswith("if ") and stripped.endswith(":"):
+            condition = stripped[3:-1].strip()
+            message = None
+            i += 1
+
+            while i < len(lines):
+                block_line = lines[i]
+                block_stripped = block_line.lstrip()
+                block_indent = len(block_line) - len(block_stripped)
+
+                # End of this if-block.
+                if block_stripped and block_indent <= indent:
+                    break
+
+                match = re.search(r'error_message\s*=\s*"([^"]+)"', block_line)
+                if match:
+                    message = match.group(1).strip()
+
+                i += 1
+
+            if message:
+                rules.append({"condition": condition, "message": message})
+            continue
+
+        i += 1
+
+    return rules
+
+
+def _find_rule_for_error(error_text, rules):
+    """Find a matching validation rule by exact ValueError message."""
+    for rule in rules:
+        if rule["message"] == error_text.strip():
+            return rule
+    return None
+
+
 def _analyze_calculator_for_issue(source_text, error_text):
     """Derive structured findings relevant to the observed runtime error."""
     findings = []
-    error_lower = error_text.lower()
+    rules = _extract_validation_rules(source_text)
+    matched_rule = _find_rule_for_error(error_text, rules)
 
     if "def calculate_monthly_payment" in source_text:
         findings.append("Issue located in calculate_monthly_payment in calculator.py")
 
-    if "annual_interest_rate" in error_lower and "annual_interest_rate <= 0" in source_text:
-        findings.append("Input validation rejects annual_interest_rate == 0")
-    if "annual_interest_rate" in error_lower and "raise ValueError(\"annual_interest_rate must be greater than 0\")" in source_text:
-        findings.append("Raised error message is 'annual_interest_rate must be greater than 0'")
-    if "annual_interest_rate" in error_lower and "raise ValueError(\"annual_interest_rate must be less than or equal to 15\")" in source_text:
-        findings.append("Validation enforces maximum annual_interest_rate of 15")
-    if "loan_amount" in error_lower and "raise ValueError(\"loan_amount must be greater than 0\")" in source_text:
-        findings.append("Validation requires loan_amount > 0")
-    if "loan_duration_months" in error_lower and "raise ValueError(\"loan_duration_months must be greater than 0\")" in source_text:
-        findings.append("Validation requires loan_duration_months > 0")
-    if "annual_interest_rate must be greater than 0" in error_lower and "denominator = (1 + monthly_rate) ** loan_duration_months - 1" in source_text:
-        findings.append("Amortization denominator becomes zero at 0% if guard is removed")
+    findings.append(f"Found {len(rules)} ValueError validation rule(s) in source")
+
+    if matched_rule:
+        findings.append(
+            f"Matched validation rule: if {matched_rule['condition']} -> ValueError('{matched_rule['message']}')"
+        )
+    else:
+        findings.append("No exact validation rule matched the observed error message")
 
     return findings
 
 
-def _build_issue_details(error_text):
-    """Map known validation errors to Jira title, summary, fixes, and criteria."""
-    error_lower = error_text.lower()
+def _build_issue_details(error_text, source_text):
+    """Build dynamic Jira details based on matching validation rule in source code."""
+    rules = _extract_validation_rules(source_text)
+    matched_rule = _find_rule_for_error(error_text, rules)
 
-    if "annual_interest_rate must be less than or equal to 15" in error_lower:
+    if matched_rule:
+        field = matched_rule["message"].split(" ", 1)[0]
+        condition = matched_rule["condition"]
+        message = matched_rule["message"]
+
         return {
-            "title": "Annual interest rate above allowed maximum is rejected",
-            "summary": "The calculator rejected input because annual_interest_rate exceeds the configured 15% maximum.",
+            "title": f"Validation error for {field}",
+            "summary": f"The calculator rejected input because the validation condition `{condition}` evaluated to True.",
             "proposed_fix": [
-                "Confirm product/business rules for interest cap behavior in this flow",
-                "Ensure UI/input hints clearly state max annual interest is 15%",
-                "Add/keep tests for boundary values: 15.0 valid, 15.1 invalid",
+                f"Confirm the business rule represented by `{condition}` for `{field}`",
+                f"Ensure user input guidance clearly communicates: '{message}'",
+                "Add regression tests for valid, boundary, and invalid values around this rule",
             ],
             "criteria": [
-                "Input at 15.0% is accepted",
-                "Input above 15.0% is rejected with a clear validation message",
-                "Validation behavior is documented consistently across UI and backend",
-            ],
-        }
-
-    if "annual_interest_rate must be greater than 0" in error_lower:
-        return {
-            "title": "Non-positive annual interest rate is rejected",
-            "summary": "The calculator rejected input because annual_interest_rate was zero or negative.",
-            "proposed_fix": [
-                "If 0% should be supported for promos, add explicit zero-rate handling path",
-                "If 0% is not allowed, keep validation and improve user guidance",
-                "Add/keep tests for -1, 0, and small positive rates",
-            ],
-            "criteria": [
-                "Expected policy for 0% rates is explicitly implemented",
-                "Validation message for invalid non-positive rates is clear",
-                "Regression tests cover all interest-rate boundary cases",
-            ],
-        }
-
-    if "loan_amount must be greater than 0" in error_lower:
-        return {
-            "title": "Non-positive loan amount is rejected",
-            "summary": "The calculator rejected input because loan_amount was zero or negative.",
-            "proposed_fix": [
-                "Keep validation requiring loan_amount > 0",
-                "Improve input constraints/message in CLI or UI",
-                "Add/keep tests for zero and negative loan amounts",
-            ],
-            "criteria": [
-                "Positive loan amounts are accepted",
-                "Zero and negative loan amounts are rejected with clear message",
-                "Validation behavior is covered by tests",
-            ],
-        }
-
-    if "loan_duration_months must be greater than 0" in error_lower:
-        return {
-            "title": "Non-positive loan duration is rejected",
-            "summary": "The calculator rejected input because loan_duration_months was zero or negative.",
-            "proposed_fix": [
-                "Keep validation requiring loan_duration_months > 0",
-                "Improve input guidance for valid month values",
-                "Add/keep tests for zero and negative durations",
-            ],
-            "criteria": [
-                "Positive duration values are accepted",
-                "Zero and negative durations are rejected with clear message",
-                "Validation behavior is covered by tests",
+                f"Inputs that satisfy `not ({condition})` are accepted",
+                f"Inputs that satisfy `{condition}` are rejected with message '{message}'",
+                "Automated tests cover this validation boundary and remain passing",
             ],
         }
 
     return {
         "title": "Runtime validation error in loan calculator",
-        "summary": "The calculator raised a runtime validation error during payment calculation.",
+        "summary": "The calculator raised a runtime validation error, but no exact source validation rule could be matched.",
         "proposed_fix": [
             "Review the failing input and expected business rule",
             "Align validation and user-facing guidance",
@@ -193,9 +214,9 @@ def _build_issue_details(error_text):
     }
 
 
-def _build_local_jira_ticket(error_text, findings):
+def _build_local_jira_ticket(error_text, findings, source_text):
     """Construct a Jira ticket using local analysis when ADK is unavailable."""
-    issue = _build_issue_details(error_text)
+    issue = _build_issue_details(error_text, source_text)
     finding_lines = "\n".join(f"- {item}" for item in findings) if findings else "- No findings"
     proposed_fix_lines = "\n".join(f"- {item}" for item in issue["proposed_fix"])
     criteria_lines = "\n".join(f"- {item}" for item in issue["criteria"])
@@ -241,22 +262,11 @@ def _extract_acceptance_criteria(ticket_text):
     return criteria
 
 
-def _build_local_customer_message(criteria):
+def _build_local_customer_message(criteria, error_text):
     """Create a short, easy-language customer update from acceptance criteria."""
-    if criteria:
-        headline = criteria[0]
-        secondary = criteria[1] if len(criteria) > 1 else criteria[0]
-        return (
-            "Short customer update:\n"
-            "We found the issue in our loan calculator and fixed it. "
-            f"{headline}. "
-            f"Also, {secondary.lower()}."
-        )
-
     return (
         "Short customer update:\n"
-        "We found the issue and fixed it. "
-        "The promo loan flow now works as expected."
+        f"We found this issue in our loan calculator: '{error_text}'. We fixed it."
     )
 
 
@@ -288,7 +298,7 @@ def _extract_text_from_events(events):
     return "\n".join(collected).strip()
 
 
-def _customer_agent_from_jira_ticket(ticket_text, customer_agent=None, adk_runtime=None):
+def _customer_agent_from_jira_ticket(ticket_text, error_text, customer_agent=None, adk_runtime=None):
     """Create a customer-friendly explanation from Jira acceptance criteria."""
     criteria = _extract_acceptance_criteria(ticket_text)
     customer_message = None
@@ -299,9 +309,11 @@ def _customer_agent_from_jira_ticket(ticket_text, customer_agent=None, adk_runti
     if customer_agent is not None and adk_runtime is not None and has_api_key:
         try:
             prompt = (
-                "Use these acceptance criteria to write a very short explanation in easy language "
-                "for a customer. The message must clearly say the issue has been fixed. "
-                "Keep it to 2-3 sentences.\n\n"
+                "Write exactly this style and keep it concise: "
+                "We found this issue in our loan calculator: '<error>'. We fixed it. "
+                "Use the observed error text in place of <error>. "
+                "No extra sentences.\n\n"
+                f"Observed Error:\n- {error_text}\n\n"
                 f"Acceptance Criteria:\n- "
                 + "\n- ".join(criteria)
             )
@@ -316,7 +328,7 @@ def _customer_agent_from_jira_ticket(ticket_text, customer_agent=None, adk_runti
     elif customer_agent is not None and adk_runtime is not None and not has_api_key:
         print("customer_agent skipped: no API key configured. Using local fallback.")
 
-    customer_message = _build_local_customer_message(criteria)
+    customer_message = _build_local_customer_message(criteria, error_text)
     print(customer_message)
     print("--- End customer_agent Output ---\n")
     return customer_message
@@ -362,7 +374,7 @@ def jira_agent_handle_promo_error(exc, jira_agent=None, customer_agent=None, adk
         print("jira_agent skipped: no API key configured. Using local fallback.")
 
     if not ticket_text:
-        ticket_text = _build_local_jira_ticket(str(exc), findings)
+        ticket_text = _build_local_jira_ticket(str(exc), findings, source_text or "")
         print(ticket_text)
         print("--- End jira_agent Output ---\n")
 
@@ -370,10 +382,13 @@ def jira_agent_handle_promo_error(exc, jira_agent=None, customer_agent=None, adk
     print(f"Ticket persisted to: {ticket_path.name}\n")
 
     customer_message = _customer_agent_from_jira_ticket(
-        ticket_text, customer_agent=customer_agent, adk_runtime=adk_runtime
+        ticket_text,
+        str(exc),
+        customer_agent=customer_agent,
+        adk_runtime=adk_runtime,
     )
 
-    summary_path = _write_fix_summary_markdown(ticket_text, customer_message, ticket_path)
+    summary_path = _write_fix_summary_markdown(ticket_text, customer_message, ticket_path, str(exc))
     print(f"Fix summary persisted to: {summary_path.name}\n")
 
     return customer_message

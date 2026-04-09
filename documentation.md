@@ -12,8 +12,8 @@ This project combines a loan calculator with an error-handling agent.
 - calculator.py: CLI calculator, input validation, error logging, automatic agent trigger.
 - mockup_agent.py: Agent logic for analysis and customer messaging.
 - error_log.json: Runtime error log created by calculator.py.
-- jira_ticket_YYYYMMDD_HHMMSS_mmm.md: Auto-generated markdown file created per error event (max 3 files retained; oldest is overwritten).
-- fix_summary_YYYYMMDD_HHMMSS_mmm.md: Easy-language summary generated from Jira acceptance criteria (max 3 files retained; oldest is overwritten).
+- jira_ticket_YYYY-MM-DD-HHMM.md: Auto-generated markdown file created per error event (max 3 files retained; oldest file is replaced).
+- fix_summary_YYYY-MM-DD-HHMM.md: Easy-language summary file created per error event (max 3 files retained; oldest file is replaced).
 - test_calculator.py: Unit tests for calculation and validation behavior.
 
 ## Runtime Flow
@@ -55,9 +55,10 @@ Steps:
 - Loads calculator.py source.
 - Derives findings for the specific observed error (for example loan amount, duration, or rate validation).
 - Produces a Jira-style ticket text whose title, summary, proposed fix, and acceptance criteria are adapted to that error message.
+- Matches the observed ValueError message against the actual validation rules in calculator.py (`if ...: raise ValueError(...)`) to explain the concrete root condition.
 - Writes one dedicated ticket file per error event (up to 3 total; oldest ticket is overwritten afterward).
-- Produces a short customer update.
-- Creates a second markdown file where the heading is the Jira title and the "What Was Fixed" section comes from acceptance criteria (up to 3 total; oldest summary is overwritten afterward).
+- Produces a short customer update in this style: "We found this issue in our loan calculator: '<error>'. We fixed it."
+- Creates a second markdown file where the heading is the Jira title, an explicit "Error Description" section contains the observed error text, and "What Was Fixed" comes from acceptance criteria (up to 3 total; oldest summary is overwritten afterward).
 
 If Google ADK and API key are available, agent-generated text is attempted.
 If not available, local fallback text is used.
@@ -97,6 +98,10 @@ Without these, the fallback local analysis still works.
 ## Logging and Artifacts
 - error_log.json is generated during calculator error events.
 - It is used to preserve error context and latest error message.
+- error_log.json timestamps use format YYYY-MM-DD-HHMM.
+- jira_ticket timestamps use format YYYY-MM-DD-HHMM.
+- fix_summary filenames inherit the same YYYY-MM-DD-HHMM suffix from the corresponding ticket filename.
+- Timestamps are generated in APP_TIMEZONE (default: Europe/Berlin).
 - All generated jira_ticket_*.md and fix_summary_*.md files are deleted when calculator.py exits.
 - error_log.json is reset to an empty list when calculator.py exits.
 - Generated runtime artifacts are ignored by .gitignore.

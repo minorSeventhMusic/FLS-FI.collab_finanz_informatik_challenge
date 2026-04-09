@@ -7,10 +7,30 @@ Currently supports:
 """
 
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+
+KNOWN_VALIDATION_ERRORS = {
+    "loan_amount must be greater than 0",
+    "loan_duration_months must be greater than 0",
+    "annual_interest_rate must be greater than 0",
+    "annual_interest_rate must be less than or equal to 15",
+}
+
+
+def _now_in_app_timezone():
+    """Return current datetime in configured app timezone (default Europe/Berlin)."""
+    tz_name = os.getenv("APP_TIMEZONE", "Europe/Berlin")
+    try:
+        return datetime.now(ZoneInfo(tz_name))
+    except Exception:
+        # Fallback to system local time if timezone configuration is invalid.
+        return datetime.now().astimezone()
 
 
 # ── Core Calculation ─────────────────────────────────────────────────────────
@@ -29,14 +49,28 @@ def calculate_monthly_payment(loan_amount, loan_duration_months, annual_interest
     Returns:
         dict with monthly_payment, total_payment, total_interest
     """
+    inputs = {
+        "loan_amount": loan_amount,
+        "loan_duration_months": loan_duration_months,
+        "annual_interest_rate": annual_interest_rate,
+    }
+
     if loan_amount <= 0:
-        raise ValueError("loan_amount must be greater than 0")
+        error_message = "loan_amount must be greater than 0"
+        _log_error_for_agent("ValueError", error_message, inputs)
+        raise ValueError(error_message)
     if loan_duration_months <= 0:
-        raise ValueError("loan_duration_months must be greater than 0")
+        error_message = "loan_duration_months must be greater than 0"
+        _log_error_for_agent("ValueError", error_message, inputs)
+        raise ValueError(error_message)
     if annual_interest_rate <= 0:
-        raise ValueError("annual_interest_rate must be greater than 0")
+        error_message = "annual_interest_rate must be greater than 0"
+        _log_error_for_agent("ValueError", error_message, inputs)
+        raise ValueError(error_message)
     if annual_interest_rate > 15:
-        raise ValueError("annual_interest_rate must be less than or equal to 15")
+        error_message = "annual_interest_rate must be less than or equal to 15"
+        _log_error_for_agent("ValueError", error_message, inputs)
+        raise ValueError(error_message)
 
     monthly_rate = annual_interest_rate / 12 / 100
 
@@ -61,7 +95,7 @@ def _log_error_for_agent(error_type, error_message, inputs):
     """Append one runtime error entry to error_log.json."""
     log_file = Path(__file__).parent / "error_log.json"
     entry = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": _now_in_app_timezone().strftime("%Y-%m-%d-%H%M"),
         "error_type": error_type,
         "error_message": error_message,
         "inputs": inputs,
@@ -177,7 +211,9 @@ def main():
 
                 except (ValueError, TypeError) as e:
                     print(f"\n  ⚠ Error: {e}\n")
-                    _log_error_for_agent(type(e).__name__, str(e), inputs)
+                    # Validation errors are already logged inside calculate_monthly_payment.
+                    if str(e) not in KNOWN_VALIDATION_ERRORS:
+                        _log_error_for_agent(type(e).__name__, str(e), inputs)
                     _trigger_error_analysis_agent()
 
             elif choice == "2":
