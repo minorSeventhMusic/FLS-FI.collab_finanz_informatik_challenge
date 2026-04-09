@@ -16,6 +16,10 @@ class JiraAdapter:
         for ticket in scenario.jira_tickets:
             existing = self.store.get_ticket(ticket.key)
             if existing:
+                # Update seed fields that may have changed (e.g., assignee added)
+                if not existing.assignee and ticket.assignee:
+                    existing.assignee = ticket.assignee
+                    self.store.upsert_ticket(existing)
                 seeded.append(existing)
             else:
                 self.store.upsert_ticket(ticket)

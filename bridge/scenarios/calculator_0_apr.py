@@ -456,8 +456,9 @@ JIRA_104 = JiraTicketData(
     status="To Do",
     priority="High",
     description=MOCKUP_JIRA_MD,
+    assignee="Daniel Schneider",
     external_url="https://jira.example.com/browse/JIRA-104",
-    history=["Created by AI Collaborator during initial review"],
+    history=["Created by AI Collaborator during initial review", "Assigned to Daniel Schneider (Product Manager)"],
 )
 
 CALCULATOR_0_APR_SCENARIO = ScenarioBundle(
