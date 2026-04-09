@@ -285,13 +285,19 @@ if active_key:
 else:
     st.caption(f"Role: **{role_label}**")
 
-# Show/hide history button
-_has_history = bool(st.session_state.store.get_conversations(role))
-if _has_history:
+# Show/hide history button — context-sensitive to active ticket
+_all_convos = st.session_state.store.get_conversations(role)
+_active_key = st.session_state.active_ticket_key
+if _active_key:
+    # Filter to conversations that mention this ticket
+    _relevant = [c for c in _all_convos if _active_key in c.user_message or _active_key in c.assistant_response]
+else:
+    _relevant = _all_convos
+
+if _relevant:
     if not st.session_state.messages:
         if st.button("Show conversation history"):
-            all_convos = st.session_state.store.get_conversations(role)
-            st.session_state.messages = _history_to_messages(all_convos[-10:])
+            st.session_state.messages = _history_to_messages(_relevant[-10:])
             st.session_state["showing_history"] = True
             st.rerun()
     elif st.session_state.get("showing_history"):
