@@ -1,15 +1,34 @@
-Focus: Value Proposition and Market Fit.
+Name: Daniel Schneider
+Age: 41
+Location: Frankfurt am Main
+Role: Senior Product Manager – Digital Banking Platform
 
-Role: Defines the "Why." They decide if the calculator should prioritize lead generation (gathering emails) or transparency (detailed math).
+Background
+MBA in Digital Business
+12+ years in fintech and banking
+Previously worked at a fintech startup and a consulting firm
 
-Human Profile: Likely a Millennial (32-40) with a background in FinTech. They are focused on the "Conversion Funnel"—ensuring that a user who calculates a loan actually clicks the "Apply" button.
+Responsibilities
+Defines product strategy for online and mobile banking
+Prioritizes product roadmap with engineering teams
+Aligns stakeholders across IT, compliance, and business units
+Oversees product lifecycle and KPIs
 
-Key Question: "Does this tool solve the user's pain point faster than our competitor’s tool?"
+Goals
+Deliver secure and scalable digital banking services
+Increase digital adoption among customers
+Reduce operational costs through automation
 
-Request 1: Status
-	1	What is the current status of project X?
-	2	Are we on time?
-	3	Are we staying within budget?
-	4	What are blockers?
+Pain Points
+Slow decision-making due to regulatory reviews
+Legacy core banking systems
+Conflicting stakeholder priorities
 
-Request 2:
+Tools
+Jira / Confluence
+Figma
+Productboard
+Data dashboards (Looker / Tableau)
+
+Mindset
+“If we don't innovate digitally, fintechs will take our customers.”

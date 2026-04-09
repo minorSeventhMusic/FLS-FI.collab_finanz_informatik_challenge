@@ -1,9 +1,33 @@
-Focus: Regulatory Adherence and Risk Mitigation.
+Name: Claudia Becker
+Age: 46
+Location: Berlin
+Role: IT Compliance Manager
 
-Role: Ensures the code follows Truth in Lending laws. They dictate the "fine print" and ensure the APR (Annual Percentage Rate) is calculated and displayed exactly as the law requires.
+Background
+Law degree with specialization in financial regulation
+15 years in banking compliance
+Deep knowledge of BaFin regulations, GDPR, PSD2
 
-Human Profile: Typically Gen X (45-55). They are risk-averse and prioritize accuracy over "sleek" UI. They often have children and understand the legal protections needed for family financial planning.
+Responsibilities
+Ensures IT systems comply with banking regulations
+Reviews new digital products for regulatory risk
+Works with legal, security, and risk teams
+Conducts internal audits
 
-Key Question: "Are the mandatory disclosures visible enough to avoid a lawsuit?"
+Goals
+Avoid regulatory penalties
+Maintain strong regulatory reputation
+Ensure transparent compliance processes
 
-Request
+Pain Points
+Fast-moving tech teams deploying features quickly
+Translating regulations into technical requirements
+Pressure from management to accelerate innovation
+
+Tools
+Governance Risk Compliance (GRC) platforms
+Documentation systems
+Audit tracking tools
+
+Mindset
+“Innovation is good, but regulation always comes first.”
