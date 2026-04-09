@@ -15,6 +15,9 @@ from bridge.scenarios import get_scenario
 
 st.set_page_config(page_title="FI.collab — Dashboard", page_icon="\U0001f91d", layout="wide")
 
+from bridge.styles import inject_shared_css
+inject_shared_css()
+
 # ── Initialize ───────────────────────────────────────────────────────────
 
 if "store" not in st.session_state:

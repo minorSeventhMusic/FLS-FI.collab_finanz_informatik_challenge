@@ -19,6 +19,9 @@ from bridge.workflow import compile_workflow, init_services
 
 st.set_page_config(page_title="FI.collab — Chat", page_icon="\U0001f91d", layout="wide")
 
+from bridge.styles import inject_shared_css
+inject_shared_css()
+
 if "store" not in st.session_state:
     st.session_state.store = ProjectStateStore()
 if "llm" not in st.session_state:

@@ -129,16 +129,11 @@ st.markdown("""
     /* Headers in red */
     h2, h3 { color: var(--fi-dark) !important; }
 
-    /* Sidebar nav items in red */
-    [data-testid="stSidebar"] a {
-        color: var(--fi-red) !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stSidebarNavLink"] span {
-        color: var(--fi-red) !important;
-    }
-    [data-testid="stSidebar"] .stPageLink a,
-    [data-testid="stSidebar"] li a {
-        color: var(--fi-red) !important;
+    /* Sidebar: only active nav item in red */
+    [data-testid="stSidebarNavLink"][aria-current="page"] span,
+    [data-testid="stSidebarNavLink"][aria-current="page"] a {
+        color: #e30613 !important;
+        font-weight: 700 !important;
     }
 </style>
 """, unsafe_allow_html=True)
