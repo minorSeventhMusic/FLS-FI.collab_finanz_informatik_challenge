@@ -20,7 +20,7 @@ if "llm" not in st.session_state:
 store = st.session_state.store
 llm = st.session_state.llm
 
-st.title("\U0001f4dd Reports")
+st.markdown('<div style="color: #e30613; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">Reports</div>', unsafe_allow_html=True)
 st.caption("Generate persona-adapted alignment and status reports")
 st.markdown("---")
 

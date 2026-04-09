@@ -25,7 +25,7 @@ if "llm" not in st.session_state:
 store = st.session_state.store
 llm = st.session_state.llm
 
-st.title("\U0001f4ca Dashboard")
+st.markdown('<div style="color: #e30613; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">Dashboard</div>', unsafe_allow_html=True)
 st.caption("Real-time alignment overview")
 st.markdown("---")
 

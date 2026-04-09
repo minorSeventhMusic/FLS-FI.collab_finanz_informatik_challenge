@@ -128,6 +128,18 @@ st.markdown("""
 
     /* Headers in red */
     h2, h3 { color: var(--fi-dark) !important; }
+
+    /* Sidebar nav items in red */
+    [data-testid="stSidebar"] a {
+        color: var(--fi-red) !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSidebarNavLink"] span {
+        color: var(--fi-red) !important;
+    }
+    [data-testid="stSidebar"] .stPageLink a,
+    [data-testid="stSidebar"] li a {
+        color: var(--fi-red) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 

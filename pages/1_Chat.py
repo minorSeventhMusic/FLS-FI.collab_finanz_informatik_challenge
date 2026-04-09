@@ -254,7 +254,7 @@ if st.session_state.last_result:
 
 # ── Main Chat Area ───────────────────────────────────────────────────────
 
-st.title("\U0001f4ac Chat")
+st.markdown('<div style="color: #e30613; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">Chat</div>', unsafe_allow_html=True)
 
 # Show active context
 active_key = st.session_state.active_ticket_key
