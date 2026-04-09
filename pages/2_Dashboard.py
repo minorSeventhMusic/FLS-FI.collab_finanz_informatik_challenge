@@ -26,21 +26,21 @@ store = st.session_state.store
 llm = st.session_state.llm
 
 st.title("\U0001f4ca Dashboard")
-st.caption("Real-time alignment overview across scenarios and tickets")
+st.caption("Real-time alignment overview")
 st.markdown("---")
 
 # ── Run Alignment Analysis ───────────────────────────────────────────────
 
-scenario = get_scenario(DEFAULT_SCENARIO)
+_data = get_scenario(DEFAULT_SCENARIO)
 
 # Cache alignment to avoid re-running LLM on every page load
 if "cached_alignment" not in st.session_state:
-    ctx = assemble(Role.DEVELOPER, Intent.ALIGNMENT_REPORT, scenario, "", [])
+    ctx = assemble(Role.DEVELOPER, Intent.ALIGNMENT_REPORT, _data, "", [])
     st.session_state.cached_alignment = analyze_alignment(ctx.context_string, llm)
 alignment = st.session_state.cached_alignment
 
 if st.button("Refresh alignment analysis"):
-    ctx = assemble(Role.DEVELOPER, Intent.ALIGNMENT_REPORT, scenario, "", [])
+    ctx = assemble(Role.DEVELOPER, Intent.ALIGNMENT_REPORT, _data, "", [])
     st.session_state.cached_alignment = analyze_alignment(ctx.context_string, llm)
     st.rerun()
 

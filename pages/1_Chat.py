@@ -11,7 +11,7 @@ from bridge.llm import build_llm_client
 from bridge.models import Role
 from bridge.personas import get_persona
 from bridge.persistence import ProjectStateStore
-from bridge.scenarios import SCENARIOS, get_scenario
+from bridge.scenarios import get_scenario
 from bridge.speech import build_stt, build_tts, get_voice_id
 from bridge.workflow import compile_workflow, init_services
 
@@ -47,9 +47,9 @@ init_services(
 )
 workflow = compile_workflow()
 
-# Ensure scenario tickets are seeded
-scenario = get_scenario(DEFAULT_SCENARIO)
-st.session_state.jira.ensure_seed_tickets(scenario)
+# Ensure tickets are seeded from data sources
+_data = get_scenario(DEFAULT_SCENARIO)
+st.session_state.jira.ensure_seed_tickets(_data)
 
 
 def _get_recent_history(role: Role, hours: int = 1):
@@ -229,7 +229,7 @@ if st.session_state.last_result:
 
 st.title("\U0001f4ac Chat")
 
-# Show active ticket context if one is selected
+# Show active context
 active_key = st.session_state.active_ticket_key
 if active_key:
     ticket = st.session_state.jira.get_ticket(active_key)
@@ -239,9 +239,9 @@ if active_key:
             f"Status: **{ticket.status}**"
         )
     else:
-        st.caption(f"Role: **{role_label}** | Scenario: **{scenario.title}**")
+        st.caption(f"Role: **{role_label}**")
 else:
-    st.caption(f"Role: **{role_label}** | Scenario: **{scenario.title}**")
+    st.caption(f"Role: **{role_label}**")
 
 # Resume prompt for older sessions
 if st.session_state.pending_resume:
