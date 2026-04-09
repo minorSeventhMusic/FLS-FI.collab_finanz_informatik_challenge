@@ -285,13 +285,20 @@ if active_key:
 else:
     st.caption(f"Role: **{role_label}**")
 
-# Show history button — always available if there's persisted history
+# Show/hide history button
 _has_history = bool(st.session_state.store.get_conversations(role))
-if _has_history and not st.session_state.messages:
-    if st.button("Show conversation history"):
-        all_convos = st.session_state.store.get_conversations(role)
-        st.session_state.messages = _history_to_messages(all_convos[-10:])
-        st.rerun()
+if _has_history:
+    if not st.session_state.messages:
+        if st.button("Show conversation history"):
+            all_convos = st.session_state.store.get_conversations(role)
+            st.session_state.messages = _history_to_messages(all_convos[-10:])
+            st.session_state["showing_history"] = True
+            st.rerun()
+    elif st.session_state.get("showing_history"):
+        if st.button("Hide history"):
+            st.session_state.messages = []
+            st.session_state["showing_history"] = False
+            st.rerun()
 
 # Render message history
 for msg in st.session_state.messages:
