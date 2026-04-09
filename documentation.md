@@ -53,11 +53,11 @@ Triggered by calculator.py with --auto-error.
 Steps:
 - Receives the error text from CLI argument.
 - Loads calculator.py source.
-- Derives findings for the promo/0% issue pattern.
-- Produces a Jira-style ticket text.
+- Derives findings for the specific observed error (for example loan amount, duration, or rate validation).
+- Produces a Jira-style ticket text whose title, summary, proposed fix, and acceptance criteria are adapted to that error message.
 - Writes one dedicated ticket file per error event (up to 3 total; oldest ticket is overwritten afterward).
 - Produces a short customer update.
-- Creates a second markdown file with easy-language fix summary based on acceptance criteria (up to 3 total; oldest summary is overwritten afterward).
+- Creates a second markdown file where the heading is the Jira title and the "What Was Fixed" section comes from acceptance criteria (up to 3 total; oldest summary is overwritten afterward).
 
 If Google ADK and API key are available, agent-generated text is attempted.
 If not available, local fallback text is used.
