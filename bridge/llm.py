@@ -154,7 +154,7 @@ class StubLLMClient:
             if "create" in lowered:
                 return (
                     "I've created a follow-up ticket for this issue.\n\n"
-                    "**BRIDGE-201**: \"Bridge follow-up: alignment gap detected\"\n"
+                    "**JIRA-201**: \"Follow-up: alignment gap detected\"\n"
                     "- Priority: High\n"
                     "- Status: To Do\n\n"
                     "This is in addition to the existing **JIRA-104** which tracks the 0% interest rate fix."

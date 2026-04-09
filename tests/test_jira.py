@@ -30,7 +30,7 @@ class TestJira(unittest.TestCase):
     def test_create_ticket_auto_key(self):
         jira, _ = self._make_jira()
         ticket = jira.create_ticket("Test", "Description")
-        self.assertTrue(ticket.key.startswith("BRIDGE-"))
+        self.assertTrue(ticket.key.startswith("JIRA-"))
         self.assertEqual(ticket.status, "To Do")
 
     def test_update_ticket_status(self):

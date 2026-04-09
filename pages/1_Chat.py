@@ -101,6 +101,15 @@ def _run_turn(prompt_text: str):
     st.session_state.messages.append({"kind": "assistant", "content": response})
     st.session_state.last_result = result
 
+    # Auto-select newly created ticket in sidebar
+    if result.get("jira_action") == "create":
+        try:
+            jp = json.loads(result.get("jira_payload", "{}"))
+            if jp.get("key"):
+                st.session_state.active_ticket_key = jp["key"]
+        except json.JSONDecodeError:
+            pass
+
     # Generate TTS audio if voice mode is on
     if st.session_state.get("voice_enabled", False) and response:
         persona = get_persona(role)

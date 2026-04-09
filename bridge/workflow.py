@@ -215,17 +215,24 @@ def handle_side_effects(state: BridgeState) -> Dict[str, Any]:
     jira_payload = "{}"
     scenario_id = state.get("scenario_id", DEFAULT_SCENARIO)
 
-    # Create ticket if requested
+    # Create ticket if requested — use LLM response as the ticket content
     if intent == Intent.CREATE_TICKET:
+        # Extract title from the LLM response (first line or first sentence)
+        response_lines = response.strip().split("\n")
+        title_line = response_lines[0].strip().lstrip("#").strip().rstrip(".")
+        # Clean markdown formatting
+        title_line = title_line.replace("**", "").replace("*", "")
+        if len(title_line) > 120:
+            title_line = title_line[:117] + "..."
+        if not title_line or len(title_line) < 5:
+            title_line = "Follow-up: " + state["user_message"][:80]
+
+        persona = get_persona(role)
         ticket = _jira.create_ticket(
-            title="Bridge follow-up: alignment gap detected",
-            description=(
-                "Automated ticket created by The Bridge.\n\n"
-                f"User ({state['role']}): {state['user_message']}\n\n"
-                f"Alignment score: {state.get('alignment_score', 'N/A')}%\n"
-                f"Summary: {state.get('alignment_summary', 'N/A')}"
-            ),
+            title=title_line,
+            description=response,
             priority="High",
+            reporter=persona.display_name,
         )
         jira_action = "create"
         jira_payload = json.dumps({"key": ticket.key, "title": ticket.title})
