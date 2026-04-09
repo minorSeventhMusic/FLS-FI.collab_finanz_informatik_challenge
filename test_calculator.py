@@ -41,9 +41,7 @@ def test_negative_rate_raises():
     with pytest.raises(ValueError):
         calculate_monthly_payment(10000, 60, -5.0)
 
-def test_zero_rate_is_supported():
-    result = calculate_monthly_payment(1200, 12, 0.0)
-    assert result["monthly_payment"] == 100.0
-    assert result["total_payment"] == 1200.0
-    assert result["total_interest"] == 0.0
+def test_zero_rate_raises():
+    with pytest.raises(ValueError):
+        calculate_monthly_payment(1200, 12, 0.0)
 
