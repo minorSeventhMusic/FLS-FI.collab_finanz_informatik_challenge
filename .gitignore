@@ -1,0 +1,7 @@
+.DS_Store
+.fls/
+__pycache__/
+.pytest_cache/
+*.pyc
+project_state.json
+
