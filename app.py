@@ -33,8 +33,10 @@ st.markdown("""
     .fi-brand {
         font-size: 1.4rem;
         color: var(--fi-red);
-        font-weight: 700;
         margin: 0;
+    }
+    .fi-brand-bold {
+        font-weight: 700;
     }
     .fi-subtitle {
         font-size: 0.95rem;
@@ -48,7 +50,7 @@ st.markdown("""
     /* ── Section headers (red) ────────────────────────────── */
     .fi-section-header {
         color: var(--fi-red);
-        font-size: 1.3rem;
+        font-size: 1.8rem;
         font-weight: 700;
         margin: 2rem 0 1rem 0;
     }
@@ -56,7 +58,7 @@ st.markdown("""
     /* ── Persona card ─────────────────────────────────────── */
     .fi-persona-name {
         color: var(--fi-red);
-        font-size: 1.2rem;
+        font-size: 1.5rem;
         font-weight: 700;
         margin: 0;
     }
@@ -135,7 +137,7 @@ from bridge.personas import PERSONAS
 st.markdown('<div class="fi-topline"></div>', unsafe_allow_html=True)
 
 # Brand
-st.markdown('<p class="fi-brand">f-i collab</p>', unsafe_allow_html=True)
+st.markdown('<p class="fi-brand">FI.<span class="fi-brand-bold">collab</span></p>', unsafe_allow_html=True)
 st.markdown(
     '<p class="fi-subtitle">Collaborative AI for business-technical alignment | <strong>finanz informatik</strong></p>',
     unsafe_allow_html=True,
