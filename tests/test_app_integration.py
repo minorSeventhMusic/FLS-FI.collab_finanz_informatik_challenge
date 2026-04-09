@@ -46,6 +46,6 @@ def test_reports_page_renders_without_errors():
 
 
 def test_landing_page_renders_without_errors():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file("FI.collab.py")
     app.run(timeout=20)
     assert not app.exception
