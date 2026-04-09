@@ -51,6 +51,48 @@ def _ensure_services() -> None:
 # ── Node Functions ───────────────────────────────────────────────────────
 
 
+import re as _re
+
+
+def _extract_ticket_fields(response: str) -> tuple:
+    """Extract title, priority, and assignee from an LLM-generated ticket response."""
+    lines = response.strip().split("\n")
+
+    title = ""
+    priority = "High"
+    assignee = ""
+
+    for line in lines:
+        stripped = line.strip().lstrip("-•").strip()
+        lowered = stripped.lower()
+
+        # Extract Summary/Title
+        if not title:
+            for prefix in ("summary:", "title:", "subject:"):
+                if lowered.startswith(prefix):
+                    title = stripped[len(prefix):].strip().strip("*").strip()
+                    break
+
+        # Extract Priority
+        if lowered.startswith("priority:"):
+            val = stripped[9:].strip().strip("*").strip()
+            if val:
+                priority = val
+
+        # Extract Assignee
+        if lowered.startswith("assignee:"):
+            val = stripped[9:].strip().strip("*").strip()
+            if val:
+                assignee = val
+
+    # Clean title
+    title = title.replace("**", "").replace("*", "")
+    if len(title) > 120:
+        title = title[:117] + "..."
+
+    return title, priority, assignee
+
+
 def _rule_based_intent(message: str) -> Intent:
     """Fast keyword-based intent classification — no LLM needed."""
     lowered = message.lower()
@@ -216,23 +258,18 @@ def handle_side_effects(state: BridgeState) -> Dict[str, Any]:
     jira_payload = "{}"
     scenario_id = state.get("scenario_id", DEFAULT_SCENARIO)
 
-    # Create ticket if requested — use LLM response as the ticket content
+    # Create ticket if requested — parse LLM response for ticket fields
     if intent == Intent.CREATE_TICKET:
-        # Extract title from the LLM response (first line or first sentence)
-        response_lines = response.strip().split("\n")
-        title_line = response_lines[0].strip().lstrip("#").strip().rstrip(".")
-        # Clean markdown formatting
-        title_line = title_line.replace("**", "").replace("*", "")
-        if len(title_line) > 120:
-            title_line = title_line[:117] + "..."
-        if not title_line or len(title_line) < 5:
-            title_line = "Follow-up: " + state["user_message"][:80]
+        title, priority, assignee = _extract_ticket_fields(response)
+        if not title:
+            title = "Follow-up: " + state["user_message"][:80]
 
         persona = get_persona(role)
         ticket = _jira.create_ticket(
-            title=title_line,
+            title=title,
             description=response,
-            priority="High",
+            priority=priority,
+            assignee=assignee,
             reporter=persona.display_name,
         )
         jira_action = "create"
