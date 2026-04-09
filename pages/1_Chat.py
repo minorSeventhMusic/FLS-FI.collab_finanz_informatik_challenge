@@ -173,15 +173,6 @@ if st.session_state.current_role != role_label:
     st.session_state.last_audio = None
     st.session_state.messages = []
     st.session_state.pending_resume = False
-
-    # Check for prior persisted conversations for this persona
-    recent = _get_recent_history(role)
-    if recent:
-        st.session_state.messages = _history_to_messages(recent)
-    else:
-        all_convos = st.session_state.store.get_conversations(role)
-        if all_convos:
-            st.session_state.pending_resume = True
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -211,7 +202,23 @@ if tickets:
                     type="primary" if is_selected else "secondary",
                     use_container_width=True,
                 ):
-                    st.session_state.active_ticket_key = ticket.key
+                    if is_selected:
+                        # Deselect — clear ticket and chat
+                        st.session_state.active_ticket_key = None
+                        st.session_state.messages = []
+                    else:
+                        # Select — show ticket summary in chat
+                        st.session_state.active_ticket_key = ticket.key
+                        st.session_state.messages = [{
+                            "kind": "assistant",
+                            "content": (
+                                f"**{ticket.key}**: {ticket.title}\n\n"
+                                f"- **Status:** {ticket.status}\n"
+                                f"- **Priority:** {ticket.priority}\n"
+                                f"- **Assignee:** {ticket.assignee or 'Unassigned'}"
+                            ),
+                        }]
+                    st.session_state.pending_resume = False
                     st.rerun()
 
     if resolved:
@@ -278,20 +285,13 @@ if active_key:
 else:
     st.caption(f"Role: **{role_label}**")
 
-# Resume prompt for older sessions
-if st.session_state.pending_resume:
-    st.info("You have a previous conversation on file. Would you like to resume?")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Resume previous session", type="primary"):
-            all_convos = st.session_state.store.get_conversations(role)
-            st.session_state.messages = _history_to_messages(all_convos[-10:])
-            st.session_state.pending_resume = False
-            st.rerun()
-    with col2:
-        if st.button("Start fresh"):
-            st.session_state.pending_resume = False
-            st.rerun()
+# Show history button — always available if there's persisted history
+_has_history = bool(st.session_state.store.get_conversations(role))
+if _has_history and not st.session_state.messages:
+    if st.button("Show conversation history"):
+        all_convos = st.session_state.store.get_conversations(role)
+        st.session_state.messages = _history_to_messages(all_convos[-10:])
+        st.rerun()
 
 # Render message history
 for msg in st.session_state.messages:
