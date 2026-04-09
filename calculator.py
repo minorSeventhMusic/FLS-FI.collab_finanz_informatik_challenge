@@ -29,8 +29,20 @@ def calculate_monthly_payment(loan_amount, loan_duration_months, annual_interest
         raise ValueError("loan_amount must be greater than 0")
     if loan_duration_months <= 0:
         raise ValueError("loan_duration_months must be greater than 0")
-    if annual_interest_rate <= 0:
-        raise ValueError("annual_interest_rate must be greater than 0")
+    if annual_interest_rate < 0:
+        raise ValueError("annual_interest_rate must be greater than or equal to 0")
+
+    # Handle interest-free promotional loans separately to avoid division by zero
+    if annual_interest_rate == 0:
+        monthly_payment = loan_amount / loan_duration_months
+        total_payment = monthly_payment * loan_duration_months
+        total_interest = 0.0
+
+        return {
+            "monthly_payment": round(monthly_payment, 2),
+            "total_payment": round(total_payment, 2),
+            "total_interest": round(total_interest, 2),
+        }
 
     monthly_rate = annual_interest_rate / 12 / 100
 
