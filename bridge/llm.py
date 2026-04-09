@@ -248,7 +248,7 @@ class GeminiClient:
     def __init__(self) -> None:
         from google import genai
 
-        self._model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        self._model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         self._client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
         self._fallback = StubLLMClient()
 
