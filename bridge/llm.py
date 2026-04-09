@@ -255,17 +255,12 @@ class GeminiClient:
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         from google.genai import types
 
-        # Use higher token limit for alignment JSON, lower for chat responses
-        is_alignment = "alignment analyst" in system_prompt.lower()
-        max_tokens = 2000 if is_alignment else 400
-
         try:
             response = self._client.models.generate_content(
                 model=self._model,
                 contents=user_prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
-                    max_output_tokens=max_tokens,
                     temperature=0.3,
                 ),
             )
