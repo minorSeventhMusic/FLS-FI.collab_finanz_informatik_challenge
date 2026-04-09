@@ -23,6 +23,11 @@ class TestSpeechStubs(unittest.TestCase):
         result = stt.transcribe(b"fake audio data")
         self.assertIn("unavailable", result.lower())
 
+    def test_stub_stt_accepts_mime_type(self):
+        stt = StubSTT()
+        result = stt.transcribe(b"fake audio data", mime_type="audio/webm")
+        self.assertIn("unavailable", result.lower())
+
     def test_voice_map_has_all_roles(self):
         for r in Role:
             self.assertIn(r.value, VOICE_MAP)
@@ -59,16 +64,19 @@ class TestBuildFunctions(unittest.TestCase):
             if old is not None:
                 os.environ["ELEVENLABS_API_KEY"] = old
 
-    def test_build_stt_without_key_returns_stub(self):
+    def test_build_stt_without_keys_returns_stub(self):
         import os
-        old = os.environ.pop("GEMINI_API_KEY", None)
+        old_el = os.environ.pop("ELEVENLABS_API_KEY", None)
+        old_gem = os.environ.pop("GEMINI_API_KEY", None)
         try:
             from bridge.speech import build_stt
             stt = build_stt()
             self.assertIsInstance(stt, StubSTT)
         finally:
-            if old is not None:
-                os.environ["GEMINI_API_KEY"] = old
+            if old_el is not None:
+                os.environ["ELEVENLABS_API_KEY"] = old_el
+            if old_gem is not None:
+                os.environ["GEMINI_API_KEY"] = old_gem
 
 
 if __name__ == "__main__":

@@ -121,7 +121,7 @@ def _run_turn(prompt_text: str):
             pass
 
     # Generate TTS audio if voice mode is on
-    if st.session_state.get("voice_enabled", False) and response:
+    if voice_responses and response:
         persona = get_persona(role)
         voice_id = persona.voice_id or get_voice_id(role.value)
         with st.spinner("Generating voice..."):
@@ -155,13 +155,12 @@ role_label = st.sidebar.selectbox(
 )
 role = _role_options[role_label]
 
-# Voice mode toggle
-voice_enabled = st.sidebar.toggle(
-    "Voice mode",
-    value=st.session_state.get("voice_enabled", False),
-    help="Enable mic input and spoken responses",
+# Voice response toggle
+voice_responses = st.sidebar.toggle(
+    "Spoken responses",
+    value=st.session_state.get("voice_responses", False),
+    help="Read responses aloud using ElevenLabs",
 )
-st.session_state.voice_enabled = voice_enabled
 
 # Handle role switch — new persona = new user logging in
 if "current_role" not in st.session_state:
@@ -318,24 +317,33 @@ if st.session_state.last_audio:
 
 # ── Input area ───────────────────────────────────────────────────────────
 
-# Voice input (mic) — shown when voice mode is on
-if voice_enabled:
-    audio_data = st.audio_input(
-        "Record your question",
-        key="voice_input",
-    )
-    if audio_data:
-        audio_bytes = audio_data.read()
-        with st.spinner("Transcribing..."):
-            transcription = st.session_state.stt.transcribe(audio_bytes)
-        if transcription and not transcription.startswith("("):
-            _run_turn(transcription)
-            st.rerun()
-        else:
-            st.warning("Could not transcribe audio. Please try again or type your question.")
+from streamlit_mic_recorder import mic_recorder
 
-# Text input — always available
-prompt = st.chat_input("Ask about alignment, discrepancies, tickets, or request a report...")
+col_mic, col_chat = st.columns([1, 20])
+with col_mic:
+    audio = mic_recorder(
+        start_prompt="\U0001f3a4",
+        stop_prompt="\u23f9",
+        key="mic_recorder",
+        format="webm",
+    )
+with col_chat:
+    prompt = st.chat_input("Ask about alignment, discrepancies, tickets, or request a report...")
+
+# Handle mic recording
+if audio and audio.get("bytes"):
+    with st.spinner("Transcribing..."):
+        transcription = st.session_state.stt.transcribe(
+            audio["bytes"],
+            mime_type="audio/webm",
+        )
+    if transcription and not transcription.startswith("("):
+        _run_turn(transcription)
+        st.rerun()
+    elif transcription:
+        st.warning("Could not transcribe audio. Please try again or type your question.")
+
+# Handle text input
 if prompt:
     _run_turn(prompt)
     st.rerun()

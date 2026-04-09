@@ -16,6 +16,7 @@ dependencies = [
   "google-genai",
   "elevenlabs",
   "python-dotenv",
+  "streamlit-mic-recorder",
 ]
 
 [tool.setuptools.packages.find]
