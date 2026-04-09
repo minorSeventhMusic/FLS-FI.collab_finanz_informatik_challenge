@@ -11,11 +11,22 @@ USER_ID = "local_user"
 
 
 def _write_ticket_markdown(ticket_text, error_text):
-    """Write one generated Jira ticket to a dedicated markdown file."""
+    """Write one Jira ticket, capping total files at 3 by overwriting the oldest."""
     now = datetime.now()
     generated_at = now.strftime("%Y-%m-%d %H:%M:%S")
     timestamp_for_name = now.strftime("%Y%m%d_%H%M%S_%f")[:-3]
-    ticket_file = Path(__file__).with_name(f"jira_ticket_{timestamp_for_name}.md")
+
+    base_dir = Path(__file__).parent
+    existing = sorted(
+        base_dir.glob("jira_ticket_*.md"),
+        key=lambda p: p.stat().st_mtime,
+    )
+
+    # Keep at most 3 files total: create new if under limit, else overwrite oldest.
+    if len(existing) < 3:
+        ticket_file = base_dir / f"jira_ticket_{timestamp_for_name}.md"
+    else:
+        ticket_file = existing[0]
 
     content = (
         "# Jira Ticket\n\n"
@@ -35,7 +46,17 @@ def _write_fix_summary_markdown(ticket_text, customer_message, ticket_path):
     criteria = _extract_acceptance_criteria(ticket_text)
     subject = _extract_jira_title(ticket_text)
     suffix = ticket_path.stem.replace("jira_ticket_", "")
-    summary_file = Path(__file__).with_name(f"fix_summary_{suffix}.md")
+    base_dir = Path(__file__).parent
+    existing = sorted(
+        base_dir.glob("fix_summary_*.md"),
+        key=lambda p: p.stat().st_mtime,
+    )
+
+    # Keep at most 3 summary files total: create new if under limit, else overwrite oldest.
+    if len(existing) < 3:
+        summary_file = base_dir / f"fix_summary_{suffix}.md"
+    else:
+        summary_file = existing[0]
 
     criteria_lines = "\n".join(f"- {item}" for item in criteria) if criteria else "- No acceptance criteria found"
     message_body = customer_message.strip().removeprefix("Short customer update:\n").strip()
@@ -64,34 +85,128 @@ def _load_calculator_source():
     return calculator_file.read_text(encoding="utf-8")
 
 
-def _analyze_calculator_for_promo_issue(source_text):
-    """Derive structured findings relevant to promo 0% failures."""
+def _analyze_calculator_for_issue(source_text, error_text):
+    """Derive structured findings relevant to the observed runtime error."""
     findings = []
+    error_lower = error_text.lower()
 
-    if "annual_interest_rate <= 0" in source_text:
-        findings.append("Input validation rejects annual_interest_rate == 0")
-    if "raise ValueError(\"annual_interest_rate must be greater than 0\")" in source_text:
-        findings.append("Raised error message is 'annual_interest_rate must be greater than 0'")
-    if "denominator = (1 + monthly_rate) ** loan_duration_months - 1" in source_text:
-        findings.append("Amortization denominator becomes zero at 0% if guard is removed")
     if "def calculate_monthly_payment" in source_text:
         findings.append("Issue located in calculate_monthly_payment in calculator.py")
+
+    if "annual_interest_rate" in error_lower and "annual_interest_rate <= 0" in source_text:
+        findings.append("Input validation rejects annual_interest_rate == 0")
+    if "annual_interest_rate" in error_lower and "raise ValueError(\"annual_interest_rate must be greater than 0\")" in source_text:
+        findings.append("Raised error message is 'annual_interest_rate must be greater than 0'")
+    if "annual_interest_rate" in error_lower and "raise ValueError(\"annual_interest_rate must be less than or equal to 15\")" in source_text:
+        findings.append("Validation enforces maximum annual_interest_rate of 15")
+    if "loan_amount" in error_lower and "raise ValueError(\"loan_amount must be greater than 0\")" in source_text:
+        findings.append("Validation requires loan_amount > 0")
+    if "loan_duration_months" in error_lower and "raise ValueError(\"loan_duration_months must be greater than 0\")" in source_text:
+        findings.append("Validation requires loan_duration_months > 0")
+    if "annual_interest_rate must be greater than 0" in error_lower and "denominator = (1 + monthly_rate) ** loan_duration_months - 1" in source_text:
+        findings.append("Amortization denominator becomes zero at 0% if guard is removed")
 
     return findings
 
 
+def _build_issue_details(error_text):
+    """Map known validation errors to Jira title, summary, fixes, and criteria."""
+    error_lower = error_text.lower()
+
+    if "annual_interest_rate must be less than or equal to 15" in error_lower:
+        return {
+            "title": "Annual interest rate above allowed maximum is rejected",
+            "summary": "The calculator rejected input because annual_interest_rate exceeds the configured 15% maximum.",
+            "proposed_fix": [
+                "Confirm product/business rules for interest cap behavior in this flow",
+                "Ensure UI/input hints clearly state max annual interest is 15%",
+                "Add/keep tests for boundary values: 15.0 valid, 15.1 invalid",
+            ],
+            "criteria": [
+                "Input at 15.0% is accepted",
+                "Input above 15.0% is rejected with a clear validation message",
+                "Validation behavior is documented consistently across UI and backend",
+            ],
+        }
+
+    if "annual_interest_rate must be greater than 0" in error_lower:
+        return {
+            "title": "Non-positive annual interest rate is rejected",
+            "summary": "The calculator rejected input because annual_interest_rate was zero or negative.",
+            "proposed_fix": [
+                "If 0% should be supported for promos, add explicit zero-rate handling path",
+                "If 0% is not allowed, keep validation and improve user guidance",
+                "Add/keep tests for -1, 0, and small positive rates",
+            ],
+            "criteria": [
+                "Expected policy for 0% rates is explicitly implemented",
+                "Validation message for invalid non-positive rates is clear",
+                "Regression tests cover all interest-rate boundary cases",
+            ],
+        }
+
+    if "loan_amount must be greater than 0" in error_lower:
+        return {
+            "title": "Non-positive loan amount is rejected",
+            "summary": "The calculator rejected input because loan_amount was zero or negative.",
+            "proposed_fix": [
+                "Keep validation requiring loan_amount > 0",
+                "Improve input constraints/message in CLI or UI",
+                "Add/keep tests for zero and negative loan amounts",
+            ],
+            "criteria": [
+                "Positive loan amounts are accepted",
+                "Zero and negative loan amounts are rejected with clear message",
+                "Validation behavior is covered by tests",
+            ],
+        }
+
+    if "loan_duration_months must be greater than 0" in error_lower:
+        return {
+            "title": "Non-positive loan duration is rejected",
+            "summary": "The calculator rejected input because loan_duration_months was zero or negative.",
+            "proposed_fix": [
+                "Keep validation requiring loan_duration_months > 0",
+                "Improve input guidance for valid month values",
+                "Add/keep tests for zero and negative durations",
+            ],
+            "criteria": [
+                "Positive duration values are accepted",
+                "Zero and negative durations are rejected with clear message",
+                "Validation behavior is covered by tests",
+            ],
+        }
+
+    return {
+        "title": "Runtime validation error in loan calculator",
+        "summary": "The calculator raised a runtime validation error during payment calculation.",
+        "proposed_fix": [
+            "Review the failing input and expected business rule",
+            "Align validation and user-facing guidance",
+            "Add regression coverage for this failure pattern",
+        ],
+        "criteria": [
+            "Failure can be reproduced and explained",
+            "Expected behavior is implemented and documented",
+            "Regression test covers the observed error",
+        ],
+    }
+
+
 def _build_local_jira_ticket(error_text, findings):
     """Construct a Jira ticket using local analysis when ADK is unavailable."""
+    issue = _build_issue_details(error_text)
     finding_lines = "\n".join(f"- {item}" for item in findings) if findings else "- No findings"
+    proposed_fix_lines = "\n".join(f"- {item}" for item in issue["proposed_fix"])
+    criteria_lines = "\n".join(f"- {item}" for item in issue["criteria"])
 
     return (
-        "JIRA Title: Promo 0% interest flow fails in monthly payment calculator\n"
+        f"JIRA Title: {issue['title']}\n"
         "Priority: High\n"
         "Component: Core Calculation\n"
         "\n"
         "Summary:\n"
-        "Promo mode intentionally calls calculate_monthly_payment with 0% interest, "
-        "but the calculator rejects that input and raises a ValueError.\n"
+        f"{issue['summary']}\n"
         "\n"
         f"Observed Error:\n- {error_text}\n"
         "\n"
@@ -99,14 +214,10 @@ def _build_local_jira_ticket(error_text, findings):
         f"{finding_lines}\n"
         "\n"
         "Proposed Fix:\n"
-        "- Update calculate_monthly_payment to support annual_interest_rate == 0 using simple division\n"
-        "- Keep annual_interest_rate < 0 as invalid input\n"
-        "- Add tests for 0% promotional cases\n"
+        f"{proposed_fix_lines}\n"
         "\n"
         "Acceptance Criteria:\n"
-        "- Promo path no longer raises an exception for 0%\n"
-        "- 0% loans return total_interest = 0.00\n"
-        "- Existing non-zero interest tests remain passing\n"
+        f"{criteria_lines}\n"
     )
 
 
@@ -133,11 +244,13 @@ def _extract_acceptance_criteria(ticket_text):
 def _build_local_customer_message(criteria):
     """Create a short, easy-language customer update from acceptance criteria."""
     if criteria:
+        headline = criteria[0]
+        secondary = criteria[1] if len(criteria) > 1 else criteria[0]
         return (
             "Short customer update:\n"
             "We found the issue in our loan calculator and fixed it. "
-            "You can now use the promo flow without this error. "
-            "0% loans are handled correctly, show 0.00 interest, and normal loan cases still work."
+            f"{headline}. "
+            f"Also, {secondary.lower()}."
         )
 
     return (
@@ -218,7 +331,7 @@ def jira_agent_handle_promo_error(exc, jira_agent=None, customer_agent=None, adk
 
     try:
         source_text = _load_calculator_source()
-        findings = _analyze_calculator_for_promo_issue(source_text)
+        findings = _analyze_calculator_for_issue(source_text, str(exc))
     except OSError as file_exc:
         print(f"jira_agent could not load calculator source: {file_exc}")
 
@@ -232,7 +345,7 @@ def jira_agent_handle_promo_error(exc, jira_agent=None, customer_agent=None, adk
         try:
             prompt = (
                 "Create a Jira ticket in plain text using this information. "
-                f"Observed promo error: {exc}. "
+                f"Observed runtime validation error: {exc}. "
                 "Analyze the calculator source and include root cause, impact, proposed fix, and acceptance criteria.\n\n"
                 f"Calculator source:\n{source_text}\n\n"
                 f"Precomputed findings:\n{chr(10).join(findings)}"

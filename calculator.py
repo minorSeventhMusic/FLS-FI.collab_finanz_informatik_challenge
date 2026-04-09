@@ -124,46 +124,75 @@ def _trigger_error_analysis_agent():
         print(f"  ⚠ Could not run error analysis agent: {run_exc}")
 
 
+def _cleanup_generated_reports():
+    """Delete generated markdown reports and reset error_log.json."""
+    base_dir = Path(__file__).parent
+    deleted_count = 0
+
+    for pattern in ("jira_ticket_*.md", "fix_summary_*.md"):
+        for file_path in base_dir.glob(pattern):
+            try:
+                file_path.unlink()
+                deleted_count += 1
+            except OSError:
+                # Ignore cleanup failures to avoid breaking quit flow.
+                pass
+
+    # Empty error log file on quit.
+    log_file = base_dir / "error_log.json"
+    try:
+        log_file.write_text("[]\n", encoding="utf-8")
+    except OSError:
+        # Ignore cleanup failures to avoid breaking quit flow.
+        pass
+
+    return deleted_count
+
+
 def main():
     print("\n🏦 LOAN CALCULATOR v1.0\n")
+    try:
+        while True:
+            print("  [1] Calculate monthly payment")
+            print("  [2] Calculate loan term (not yet implemented)")
+            print("  [q] Quit\n")
 
-    while True:
-        print("  [1] Calculate monthly payment")
-        print("  [2] Calculate loan term (not yet implemented)")
-        print("  [q] Quit\n")
+            choice = input("Choice: ").strip().lower()
 
-        choice = input("Choice: ").strip().lower()
+            if choice == "1":
+                inputs = {}
+                try:
+                    amount = float(input("  Loan amount (€): "))
+                    inputs["loan_amount"] = amount
+                    months = int(input("  Duration (months): "))
+                    inputs["loan_duration_months"] = months
+                    rate = float(input("  Annual interest rate (%): "))
+                    inputs["annual_interest_rate"] = rate
 
-        if choice == "1":
-            inputs = {}
-            try:
-                amount = float(input("  Loan amount (€): "))
-                inputs["loan_amount"] = amount
-                months = int(input("  Duration (months): "))
-                inputs["loan_duration_months"] = months
-                rate = float(input("  Annual interest rate (%): "))
-                inputs["annual_interest_rate"] = rate
+                    result = calculate_monthly_payment(amount, months, rate)
 
-                result = calculate_monthly_payment(amount, months, rate)
+                    print(f"\n  Monthly payment: € {result['monthly_payment']:,.2f}")
+                    print(f"  Total payment:   € {result['total_payment']:,.2f}")
+                    print(f"  Total interest:  € {result['total_interest']:,.2f}\n")
 
-                print(f"\n  Monthly payment: € {result['monthly_payment']:,.2f}")
-                print(f"  Total payment:   € {result['total_payment']:,.2f}")
-                print(f"  Total interest:  € {result['total_interest']:,.2f}\n")
+                except (ValueError, TypeError) as e:
+                    print(f"\n  ⚠ Error: {e}\n")
+                    _log_error_for_agent(type(e).__name__, str(e), inputs)
+                    _trigger_error_analysis_agent()
 
-            except (ValueError, TypeError) as e:
-                print(f"\n  ⚠ Error: {e}\n")
-                _log_error_for_agent(type(e).__name__, str(e), inputs)
-                _trigger_error_analysis_agent()
+            elif choice == "2":
+                print("\n  ⚠ Not yet implemented. See BUSINESS_REQUIREMENT.md\n")
 
-        elif choice == "2":
-            print("\n  ⚠ Not yet implemented. See BUSINESS_REQUIREMENT.md\n")
+            elif choice == "q":
+                print("Goodbye! 👋\n")
+                break
 
-        elif choice == "q":
-            print("Goodbye! 👋\n")
-            break
-
-        else:
-            print("\n  ⚠ Invalid choice.\n")
+            else:
+                print("\n  ⚠ Invalid choice.\n")
+    finally:
+        deleted = _cleanup_generated_reports()
+        if deleted:
+            print(f"🧹 Cleaned up {deleted} generated report file(s).")
 
 
 if __name__ == "__main__":

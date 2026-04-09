@@ -12,8 +12,8 @@ This project combines a loan calculator with an error-handling agent.
 - calculator.py: CLI calculator, input validation, error logging, automatic agent trigger.
 - mockup_agent.py: Agent logic for analysis and customer messaging.
 - error_log.json: Runtime error log created by calculator.py.
-- jira_ticket_YYYYMMDD_HHMMSS_mmm.md: Auto-generated markdown file created per error event.
-- fix_summary_YYYYMMDD_HHMMSS_mmm.md: Easy-language summary generated from Jira acceptance criteria.
+- jira_ticket_YYYYMMDD_HHMMSS_mmm.md: Auto-generated markdown file created per error event (max 3 files retained; oldest is overwritten).
+- fix_summary_YYYYMMDD_HHMMSS_mmm.md: Easy-language summary generated from Jira acceptance criteria (max 3 files retained; oldest is overwritten).
 - test_calculator.py: Unit tests for calculation and validation behavior.
 
 ## Runtime Flow
@@ -55,9 +55,9 @@ Steps:
 - Loads calculator.py source.
 - Derives findings for the promo/0% issue pattern.
 - Produces a Jira-style ticket text.
-- Writes one dedicated ticket file per error event.
+- Writes one dedicated ticket file per error event (up to 3 total; oldest ticket is overwritten afterward).
 - Produces a short customer update.
-- Creates a second markdown file with easy-language fix summary based on acceptance criteria.
+- Creates a second markdown file with easy-language fix summary based on acceptance criteria (up to 3 total; oldest summary is overwritten afterward).
 
 If Google ADK and API key are available, agent-generated text is attempted.
 If not available, local fallback text is used.
@@ -97,6 +97,8 @@ Without these, the fallback local analysis still works.
 ## Logging and Artifacts
 - error_log.json is generated during calculator error events.
 - It is used to preserve error context and latest error message.
+- All generated jira_ticket_*.md and fix_summary_*.md files are deleted when calculator.py exits.
+- error_log.json is reset to an empty list when calculator.py exits.
 - Generated runtime artifacts are ignored by .gitignore.
 
 ## Testing
