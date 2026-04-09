@@ -252,7 +252,7 @@ class GeminiClient:
     def __init__(self) -> None:
         from google import genai
 
-        self._model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        self._model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self._client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
         self._fallback = StubLLMClient()
 
@@ -271,7 +271,7 @@ class GeminiClient:
             return response.text
         except Exception as e:
             import streamlit as st
-            st.warning(f"Gemini API error: {e.__class__.__name__}. Using offline mode.")
+            st.error(f"Gemini API error: {e.__class__.__name__}: {str(e)[:120]}. Falling back to offline mode.")
             return self._fallback.generate(system_prompt, user_prompt)
 
 
