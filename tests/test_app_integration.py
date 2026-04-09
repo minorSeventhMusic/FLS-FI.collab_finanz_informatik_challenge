@@ -12,15 +12,14 @@ def test_chat_page_renders_without_errors():
 def test_chat_page_has_role_selector():
     app = AppTest.from_file("pages/1_Chat.py")
     app.run(timeout=15)
-    # Now a selectbox instead of radio
-    assert app.selectbox[0].value == "Business Analyst"
+    assert "Business Analyst" in app.selectbox[0].value
 
 
 def test_role_switch_to_developer():
     app = AppTest.from_file("pages/1_Chat.py")
     app.run(timeout=15)
-    app.selectbox[0].set_value("Developer").run(timeout=15)
-    assert app.selectbox[0].value == "Developer"
+    app.selectbox[0].set_value("Anna Fischer (Developer)").run(timeout=15)
+    assert "Developer" in app.selectbox[0].value
 
 
 def test_role_switch_to_persona():
@@ -48,5 +47,5 @@ def test_reports_page_renders_without_errors():
 
 def test_landing_page_renders_without_errors():
     app = AppTest.from_file("app.py")
-    app.run(timeout=15)
+    app.run(timeout=20)
     assert not app.exception

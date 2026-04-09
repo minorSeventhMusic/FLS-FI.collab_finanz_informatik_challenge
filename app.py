@@ -139,12 +139,36 @@ selected_role = _role_options[selected_label]
 # Store selection so Chat page picks it up
 st.session_state["selected_landing_role"] = selected_label
 
-# Show persona preview
+# Show persona card with picture
 persona = PERSONAS[selected_role]
-with st.container(border=True):
-    st.markdown(f"**{persona.display_name}**")
-    st.caption(f"Tone: {persona.tone}")
-    st.markdown(persona.system_instructions.replace("\\n", "\n").split("Follow these rules")[0].strip())
+
+col_pic, col_info = st.columns([1, 3], gap="medium")
+with col_pic:
+    if persona.picture:
+        st.image(persona.picture, width=180)
+with col_info:
+    with st.container(border=True):
+        st.markdown(f"### {persona.display_name}")
+        st.caption(f"Tone: _{persona.tone}_")
+        # Extract the persona background (before "Follow these rules")
+        bio = persona.system_instructions.replace("\\n", "\n").split("Follow these rules")[0].strip()
+        # Clean up the "You are speaking to..." prefix
+        bio_lines = [l for l in bio.split("\n") if l.strip()]
+        for line in bio_lines:
+            st.markdown(line)
 
 st.markdown("---")
-st.markdown("Navigate to **Chat**, **Dashboard**, or **Reports** in the sidebar.")
+
+# Project list
+st.markdown("### Your Projects")
+with st.container(border=True):
+    proj_col1, proj_col2 = st.columns([3, 1])
+    with proj_col1:
+        st.markdown("**FlexiLoan Retail Engine**")
+        st.caption("Customer-facing loan calculator with 0% APR promotional support")
+        st.caption("Alignment: Critical gaps detected | Open tickets: JIRA-104")
+    with proj_col2:
+        st.markdown("[\U0001f4ac Open in Chat](./Chat)")
+
+st.markdown("---")
+st.caption("Navigate to **Chat**, **Dashboard**, or **Reports** in the sidebar.")
