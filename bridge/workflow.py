@@ -20,9 +20,7 @@ from bridge.models import (
 from bridge.personas import get_persona
 from bridge.persistence import ProjectStateStore
 from bridge.prompts.system import (
-    CONCIERGE_GATE_PROMPT,
     HANDOFF_RESPONSE_PROMPT,
-    INTENT_CLASSIFICATION_PROMPT,
     RESPONSE_SYSTEM_PROMPT,
 )
 from bridge.scenarios import get_scenario
@@ -53,20 +51,31 @@ def _ensure_services() -> None:
 # ── Node Functions ───────────────────────────────────────────────────────
 
 
+def _rule_based_intent(message: str) -> Intent:
+    """Fast keyword-based intent classification — no LLM needed."""
+    lowered = message.lower()
+    if "create" in lowered and "ticket" in lowered:
+        return Intent.CREATE_TICKET
+    if any(w in lowered for w in ("open ticket", "raise ticket", "make ticket")):
+        return Intent.CREATE_TICKET
+    if any(w in lowered for w in ("update ticket", "change status", "move ticket")):
+        return Intent.UPDATE_TICKET
+    if any(w in lowered for w in ("ticket status", "status of", "jira status", "what tickets", "open tickets", "show ticket")):
+        return Intent.TICKET_STATUS
+    if any(w in lowered for w in ("mismatch", "discrepancy", "drift", "not matching", "contradiction", "conflict")):
+        return Intent.DISCREPANCY_CHECK
+    if any(w in lowered for w in ("report", "summary", "alignment overview", "overall")):
+        return Intent.ALIGNMENT_REPORT
+    if any(w in lowered for w in ("code", "function", "implementation", "calculate", "validation", "test")):
+        return Intent.CODE_QUESTION
+    if any(w in lowered for w in ("business", "requirement", "stakeholder", "customer", "compliance")):
+        return Intent.BUSINESS_QUESTION
+    return Intent.GENERAL
+
+
 def classify_intent(state: BridgeState) -> Dict[str, Any]:
     _ensure_services()
-    prompt = INTENT_CLASSIFICATION_PROMPT.format(
-        role=state["role"],
-        user_message=state["user_message"],
-    )
-    raw = _llm.generate(prompt, state["user_message"])
-    raw_clean = raw.strip().lower().replace(" ", "_")
-
-    try:
-        intent = Intent(raw_clean)
-    except ValueError:
-        intent = Intent.GENERAL
-
+    intent = _rule_based_intent(state["user_message"])
     return {"intent": intent.value}
 
 
@@ -92,22 +101,23 @@ def assemble_context(state: BridgeState) -> Dict[str, Any]:
     }
 
 
-def concierge_gate(state: BridgeState) -> Dict[str, Any]:
-    _ensure_services()
-    prompt = CONCIERGE_GATE_PROMPT.format(
-        role=state["role"],
-        user_message=state["user_message"],
-        intent=state["intent"],
-    )
-    raw = _llm.generate(prompt, state["user_message"])
+_CODE_REQUEST_KEYWORDS = ("raw code", "full code", "source code", "stack trace", "show me the code", "see the code")
 
-    try:
-        data = json.loads(raw.strip())
-        restricted = bool(data.get("restricted", False))
-        reason = data.get("reason", "")
-    except (json.JSONDecodeError, AttributeError):
-        restricted = False
-        reason = ""
+
+def concierge_gate(state: BridgeState) -> Dict[str, Any]:
+    """Rule-based access control — no LLM needed."""
+    _ensure_services()
+    role = Role(state["role"])
+    persona = get_persona(role)
+    lowered = state["user_message"].lower()
+
+    restricted = False
+    reason = ""
+
+    if "raw_code" in persona.hidden_doc_types:
+        if any(kw in lowered for kw in _CODE_REQUEST_KEYWORDS):
+            restricted = True
+            reason = f"{persona.display_name} receives translated summaries instead of raw source code."
 
     return {"restricted": restricted, "handoff_reason": reason}
 
@@ -163,9 +173,20 @@ def generate_handoff_response(state: BridgeState) -> Dict[str, Any]:
     }
 
 
+_cached_alignment = None  # type: ignore[assignment]
+
+
 def run_alignment(state: BridgeState) -> Dict[str, Any]:
     _ensure_services()
-    result = analyze_alignment(state["assembled_context"], _llm)
+    global _cached_alignment
+
+    # Reuse cached alignment unless user explicitly asks for analysis
+    intent = state.get("intent", "")
+    if _cached_alignment is not None and intent not in ("alignment_report", "discrepancy_check"):
+        result = _cached_alignment
+    else:
+        result = analyze_alignment(state["assembled_context"], _llm)
+        _cached_alignment = result
 
     return {
         "alignment_discrepancies": json.dumps([
