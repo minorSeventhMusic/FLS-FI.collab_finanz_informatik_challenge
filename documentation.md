@@ -12,7 +12,8 @@ This project combines a loan calculator with an error-handling agent.
 - calculator.py: CLI calculator, input validation, error logging, automatic agent trigger.
 - mockup_agent.py: Agent logic for analysis and customer messaging.
 - error_log.json: Runtime error log created by calculator.py.
-- jira_ticket.md: Auto-generated markdown file where each error event is appended as a Jira ticket entry.
+- jira_ticket_YYYYMMDD_HHMMSS_mmm.md: Auto-generated markdown file created per error event.
+- fix_summary_YYYYMMDD_HHMMSS_mmm.md: Easy-language summary generated from Jira acceptance criteria.
 - test_calculator.py: Unit tests for calculation and validation behavior.
 
 ## Runtime Flow
@@ -54,8 +55,9 @@ Steps:
 - Loads calculator.py source.
 - Derives findings for the promo/0% issue pattern.
 - Produces a Jira-style ticket text.
-- Appends the ticket to jira_ticket.md.
+- Writes one dedicated ticket file per error event.
 - Produces a short customer update.
+- Creates a second markdown file with easy-language fix summary based on acceptance criteria.
 
 If Google ADK and API key are available, agent-generated text is attempted.
 If not available, local fallback text is used.

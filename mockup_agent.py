@@ -10,29 +10,53 @@ APP_NAME = "fls_bridge_challenge"
 USER_ID = "local_user"
 
 
-def _append_ticket_markdown(ticket_text, error_text):
-    """Append a generated Jira ticket to jira_ticket.md."""
-    ticket_file = Path(__file__).with_name("jira_ticket.md")
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def _write_ticket_markdown(ticket_text, error_text):
+    """Write one generated Jira ticket to a dedicated markdown file."""
+    now = datetime.now()
+    generated_at = now.strftime("%Y-%m-%d %H:%M:%S")
+    timestamp_for_name = now.strftime("%Y%m%d_%H%M%S_%f")[:-3]
+    ticket_file = Path(__file__).with_name(f"jira_ticket_{timestamp_for_name}.md")
 
-    section = (
-        "\n## Ticket Entry\n\n"
+    content = (
+        "# Jira Ticket\n\n"
         f"- Generated at: {generated_at}\n"
         f"- Source error: {error_text}\n\n"
-        "### Jira Ticket\n\n"
+        "## Jira Content\n\n"
         "```text\n"
         f"{ticket_text.strip()}\n"
         "```\n"
     )
-
-    if not ticket_file.exists():
-        header = "# Jira Tickets\n\nAuto-generated tickets from calculator runtime errors.\n"
-        ticket_file.write_text(header + section, encoding="utf-8")
-        return ticket_file
-
-    with open(ticket_file, "a", encoding="utf-8") as f:
-        f.write(section)
+    ticket_file.write_text(content, encoding="utf-8")
     return ticket_file
+
+
+def _write_fix_summary_markdown(ticket_text, customer_message, ticket_path):
+    """Create an easy-language summary markdown from Jira acceptance criteria."""
+    criteria = _extract_acceptance_criteria(ticket_text)
+    subject = _extract_jira_title(ticket_text)
+    suffix = ticket_path.stem.replace("jira_ticket_", "")
+    summary_file = Path(__file__).with_name(f"fix_summary_{suffix}.md")
+
+    criteria_lines = "\n".join(f"- {item}" for item in criteria) if criteria else "- No acceptance criteria found"
+    message_body = customer_message.strip().removeprefix("Short customer update:\n").strip()
+
+    content = (
+        f"# {subject}\n\n"
+        f"{message_body}\n\n"
+        "## What Was Fixed\n\n"
+        f"{criteria_lines}\n"
+    )
+    summary_file.write_text(content, encoding="utf-8")
+    return summary_file
+
+
+def _extract_jira_title(ticket_text):
+    """Extract Jira title line from ticket text and return only the title value."""
+    for raw_line in ticket_text.splitlines():
+        line = raw_line.strip()
+        if line.lower().startswith("jira title:"):
+            return line.split(":", 1)[1].strip() or "Fix Summary"
+    return "Fix Summary"
 
 def _load_calculator_source():
     """Load calculator source for issue analysis."""
@@ -229,12 +253,17 @@ def jira_agent_handle_promo_error(exc, jira_agent=None, customer_agent=None, adk
         print(ticket_text)
         print("--- End jira_agent Output ---\n")
 
-    ticket_path = _append_ticket_markdown(ticket_text, str(exc))
+    ticket_path = _write_ticket_markdown(ticket_text, str(exc))
     print(f"Ticket persisted to: {ticket_path.name}\n")
 
-    return _customer_agent_from_jira_ticket(
+    customer_message = _customer_agent_from_jira_ticket(
         ticket_text, customer_agent=customer_agent, adk_runtime=adk_runtime
     )
+
+    summary_path = _write_fix_summary_markdown(ticket_text, customer_message, ticket_path)
+    print(f"Fix summary persisted to: {summary_path.name}\n")
+
+    return customer_message
 
 
 def build_agents():
