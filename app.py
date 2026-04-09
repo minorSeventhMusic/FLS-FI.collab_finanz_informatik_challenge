@@ -49,24 +49,26 @@ st.markdown("""
 
     /* ── Section headers (red) ────────────────────────────── */
     .fi-section-header {
-        color: var(--fi-red);
-        font-size: 3.6rem;
-        font-weight: 700;
-        margin: 2rem 0 1rem 0;
+        color: var(--fi-red) !important;
+        font-size: 3.6rem !important;
+        font-weight: 700 !important;
+        margin: 2rem 0 1rem 0 !important;
+        line-height: 1.2 !important;
     }
 
     /* ── Persona card ─────────────────────────────────────── */
     .fi-persona-name {
-        color: var(--fi-red);
-        font-size: 3rem;
-        font-weight: 700;
-        margin: 0;
+        color: var(--fi-red) !important;
+        font-size: 3rem !important;
+        font-weight: 700 !important;
+        margin: 0 !important;
+        line-height: 1.2 !important;
     }
     .fi-persona-tone {
-        color: var(--fi-grey);
-        font-style: italic;
-        font-size: 0.85rem;
-        margin: 0.25rem 0 0.75rem 0;
+        color: var(--fi-grey) !important;
+        font-style: italic !important;
+        font-size: 0.85rem !important;
+        margin: 0.25rem 0 0.75rem 0 !important;
     }
 
     /* ── Global overrides ─────────────────────────────────── */
@@ -172,11 +174,11 @@ if selected_label != "Select your role...":
     with col_info:
         with st.container(border=True):
             st.markdown(
-                f'<p class="fi-persona-name">{persona.display_name}</p>',
+                f'<div style="color: #e30613; font-size: 3rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.25rem;">{persona.display_name}</div>',
                 unsafe_allow_html=True,
             )
             st.markdown(
-                f'<p class="fi-persona-tone">{persona.tone}</p>',
+                f'<div style="color: #6c757d; font-style: italic; font-size: 0.85rem; margin-bottom: 0.75rem;">{persona.tone}</div>',
                 unsafe_allow_html=True,
             )
             bio = persona.system_instructions.replace("\\n", "\n").split("Follow these rules")[0].strip()
@@ -186,7 +188,7 @@ if selected_label != "Select your role...":
 
     # Projects section
     st.markdown(
-        '<p class="fi-section-header">Your Projects</p>',
+        '<div style="color: #e30613; font-size: 3.6rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2;">Your Projects</div>',
         unsafe_allow_html=True,
     )
     with st.container(border=True):
