@@ -140,7 +140,11 @@ st.markdown("""
 
 # ── Landing Page Content ─────────────────────────────────────────────────
 
+from bridge.jira import JiraAdapter
 from bridge.personas import PERSONAS
+from bridge.persistence import ProjectStateStore
+from bridge.scenarios import get_scenario
+from bridge.config import DEFAULT_SCENARIO
 
 # Red top line
 st.markdown('<div class="fi-topline"></div>', unsafe_allow_html=True)
@@ -226,3 +230,37 @@ if selected_label != "Select your role...":
             if st.button("\U0001f4ac Open in Chat", use_container_width=True):
                 st.session_state["selected_landing_role"] = selected_label
                 st.switch_page("pages/1_Chat.py")
+
+    # Urgent section — high/highest priority tickets assigned to this persona
+    _store = ProjectStateStore()
+    _jira = JiraAdapter(_store)
+    _jira.ensure_seed_tickets(get_scenario(DEFAULT_SCENARIO))
+    _all_tickets = _jira.list_tickets()
+
+    _urgent = [
+        t for t in _all_tickets
+        if t.priority in ("High", "Highest", "Critical")
+        and t.status != "Done"
+        and (
+            t.assignee
+            and persona.display_name.split("(")[0].strip().lower()
+            in t.assignee.lower()
+        )
+    ]
+
+    if _urgent:
+        st.markdown(
+            '<div style="color: #e30613; font-size: 1.8rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2;">Urgent</div>',
+            unsafe_allow_html=True,
+        )
+        for t in _urgent:
+            with st.container(border=True):
+                urg_col1, urg_col2 = st.columns([3, 1])
+                with urg_col1:
+                    st.markdown(f"**{t.key}**: {t.title}")
+                    st.caption(f"Priority: {t.priority} | Status: {t.status}")
+                with urg_col2:
+                    if st.button("Open in Chat", key=f"urgent-{t.key}", use_container_width=True):
+                        st.session_state["selected_landing_role"] = selected_label
+                        st.session_state["active_ticket_key"] = t.key
+                        st.switch_page("pages/1_Chat.py")
