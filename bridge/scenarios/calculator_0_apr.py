@@ -351,29 +351,82 @@ PERSONA_CONFLICTS = """\
 # === Persona Detail Files (from origin/business personas/) ===
 
 PERSONA_PRODUCT_MANAGER = """\
-Focus: Value Proposition and Market Fit.
+Name: Daniel Schneider | Age: 41 | Location: Frankfurt am Main
+Role: Senior Product Manager – Digital Banking Platform
 
-Role: Defines the "Why." They decide if the calculator should prioritize lead generation \
-(gathering emails) or transparency (detailed math).
-
-Human Profile: Likely a Millennial (32-40) with a background in FinTech. They are focused \
-on the "Conversion Funnel" — ensuring that a user who calculates a loan actually clicks \
-the "Apply" button.
-
-Key Question: "Does this tool solve the user's pain point faster than our competitor's tool?"
+Background: MBA in Digital Business. 12+ years in fintech and banking.
+Responsibilities: Defines product strategy, prioritizes roadmap with engineering, aligns \
+stakeholders across IT/compliance/business, oversees product lifecycle and KPIs.
+Goals: Deliver secure and scalable digital banking services. Increase digital adoption. \
+Reduce operational costs through automation.
+Pain Points: Slow decision-making due to regulatory reviews. Legacy core banking systems. \
+Conflicting stakeholder priorities.
+Tools: Jira/Confluence, Figma, Productboard, Looker/Tableau.
+Mindset: "If we don't innovate digitally, fintechs will take our customers."
 """
 
 PERSONA_COMPLIANCE_OFFICER = """\
-Focus: Regulatory Adherence and Risk Mitigation.
+Name: Claudia Becker | Age: 46 | Location: Berlin
+Role: IT Compliance Manager
 
-Role: Ensures the code follows Truth in Lending laws. They dictate the "fine print" and \
-ensure the APR (Annual Percentage Rate) is calculated and displayed exactly as the law requires.
+Background: Law degree with specialization in financial regulation. 15 years in banking compliance. \
+Deep knowledge of BaFin regulations, GDPR, PSD2.
+Responsibilities: Ensures IT systems comply with banking regulations. Reviews new digital products \
+for regulatory risk. Works with legal, security, and risk teams. Conducts internal audits.
+Goals: Avoid regulatory penalties. Maintain strong regulatory reputation. Ensure transparent \
+compliance processes.
+Pain Points: Fast-moving tech teams deploying features quickly. Translating regulations into \
+technical requirements. Pressure from management to accelerate innovation.
+Tools: GRC platforms, documentation systems, audit tracking tools.
+Mindset: "Innovation is good, but regulation always comes first."
+"""
 
-Human Profile: Typically Gen X (45-55). They are risk-averse and prioritize accuracy over \
-"sleek" UI. They often have children and understand the legal protections needed for family \
-financial planning.
+PERSONA_MARKETING_MANAGER = """\
+Name: Julia Weber | Age: 34 | Location: Hamburg
+Role: Digital Marketing Manager – Banking Products
 
-Key Question: "Are the mandatory disclosures visible enough to avoid a lawsuit?"
+Background: Degree in Marketing & Communications. 9 years in digital marketing. Experienced \
+in fintech and financial services campaigns.
+Responsibilities: Launch marketing campaigns for digital banking products. Manage customer \
+acquisition channels. Analyze campaign performance and user behavior.
+Goals: Increase app adoption and digital engagement. Improve customer acquisition cost. \
+Strengthen the bank's modern brand image.
+Pain Points: Strict financial advertising regulations. Limited customer data due to privacy \
+restrictions. Slow campaign approvals.
+Tools: Google Analytics/Adobe Analytics, Salesforce CRM, marketing automation, A/B testing.
+Mindset: "Banks must market themselves like tech companies."
+"""
+
+PERSONA_RISK_ANALYST = """\
+Name: Mehmet Yilmaz | Age: 38 | Location: Frankfurt am Main
+Role: IT Risk Analyst – Digital Systems
+
+Background: MSc in Finance and Risk Management. 11 years in banking risk analysis. Strong \
+experience in cybersecurity and operational risk.
+Responsibilities: Identify IT and operational risks in digital banking systems. Conduct risk \
+assessments for new technologies. Monitor fraud and system vulnerabilities.
+Goals: Prevent financial and operational losses. Ensure stable banking infrastructure. \
+Strengthen cybersecurity posture.
+Pain Points: Increasing cyber threats. Complexity of integrated banking systems. Balancing \
+innovation with risk control.
+Tools: Risk assessment platforms, security monitoring systems, data analysis tools.
+Mindset: "Every new feature introduces a new risk."
+"""
+
+PERSONA_UX_DESIGNER = """\
+Name: Lukas Hoffmann | Age: 29 | Location: Berlin
+Role: Senior UX Designer – Mobile Banking
+
+Background: Degree in Human-Computer Interaction. 6 years in UX design. Previously worked \
+at a fintech startup.
+Responsibilities: Design intuitive digital banking interfaces. Conduct usability testing. \
+Work with product managers and developers. Ensure accessibility.
+Goals: Simplify complex financial tasks. Reduce friction in digital onboarding. Improve \
+mobile banking usability.
+Pain Points: Legacy design constraints. Security requirements affecting usability. Too many \
+stakeholders reviewing designs.
+Tools: Figma, Miro, user testing platforms, analytics tools.
+Mindset: "Banking should feel as simple as sending a message."
 """
 
 
@@ -429,6 +482,9 @@ CALCULATOR_0_APR_SCENARIO = ScenarioBundle(
     persona_details={
         "product_manager": PERSONA_PRODUCT_MANAGER,
         "compliance_officer": PERSONA_COMPLIANCE_OFFICER,
+        "marketing_manager": PERSONA_MARKETING_MANAGER,
+        "risk_analyst": PERSONA_RISK_ANALYST,
+        "ux_designer": PERSONA_UX_DESIGNER,
     },
     additional_comms=[SALES_COMPLAINT],
     known_discrepancies=[
