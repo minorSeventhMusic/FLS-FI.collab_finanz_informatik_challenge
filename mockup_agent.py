@@ -1,12 +1,38 @@
 import importlib
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from calculator import calculate_monthly_payment
 
 APP_NAME = "fls_bridge_challenge"
 USER_ID = "local_user"
+
+
+def _append_ticket_markdown(ticket_text, error_text):
+    """Append a generated Jira ticket to jira_ticket.md."""
+    ticket_file = Path(__file__).with_name("jira_ticket.md")
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    section = (
+        "\n## Ticket Entry\n\n"
+        f"- Generated at: {generated_at}\n"
+        f"- Source error: {error_text}\n\n"
+        "### Jira Ticket\n\n"
+        "```text\n"
+        f"{ticket_text.strip()}\n"
+        "```\n"
+    )
+
+    if not ticket_file.exists():
+        header = "# Jira Tickets\n\nAuto-generated tickets from calculator runtime errors.\n"
+        ticket_file.write_text(header + section, encoding="utf-8")
+        return ticket_file
+
+    with open(ticket_file, "a", encoding="utf-8") as f:
+        f.write(section)
+    return ticket_file
 
 def _load_calculator_source():
     """Load calculator source for issue analysis."""
@@ -202,6 +228,9 @@ def jira_agent_handle_promo_error(exc, jira_agent=None, customer_agent=None, adk
         ticket_text = _build_local_jira_ticket(str(exc), findings)
         print(ticket_text)
         print("--- End jira_agent Output ---\n")
+
+    ticket_path = _append_ticket_markdown(ticket_text, str(exc))
+    print(f"Ticket persisted to: {ticket_path.name}\n")
 
     return _customer_agent_from_jira_ticket(
         ticket_text, customer_agent=customer_agent, adk_runtime=adk_runtime
