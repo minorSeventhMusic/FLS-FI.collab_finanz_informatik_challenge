@@ -1,12 +1,12 @@
 import importlib
 import os
+import sys
 from pathlib import Path
 
 from calculator import calculate_monthly_payment
 
 APP_NAME = "fls_bridge_challenge"
 USER_ID = "local_user"
-
 
 def _load_calculator_source():
     """Load calculator source for issue analysis."""
@@ -320,6 +320,16 @@ def run_local_cli(jira_agent=None, customer_agent=None, adk_runtime=None):
 
 if __name__ == "__main__":
     promotion_agent, jira_agent, customer_agent, adk_runtime, error = build_agents()
+
+    if len(sys.argv) >= 3 and sys.argv[1] == "--auto-error":
+        auto_error_text = " ".join(sys.argv[2:]).strip()
+        jira_agent_handle_promo_error(
+            Exception(auto_error_text),
+            jira_agent=jira_agent,
+            customer_agent=customer_agent,
+            adk_runtime=adk_runtime,
+        )
+        sys.exit(0)
 
     if promotion_agent is None:
         print(error)

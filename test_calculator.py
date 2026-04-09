@@ -45,3 +45,7 @@ def test_zero_rate_raises():
     with pytest.raises(ValueError):
         calculate_monthly_payment(1200, 12, 0.0)
 
+def test_rate_above_max_raises():
+    with pytest.raises(ValueError):
+        calculate_monthly_payment(1200, 12, 15.1)
+
