@@ -83,14 +83,21 @@ def _run_turn(prompt_text: str):
     st.session_state.pending_resume = False
     st.session_state.messages.append({"kind": "user", "content": prompt_text})
 
-    with st.spinner("The Bridge is thinking..."):
-        result = workflow.invoke({
-            "user_message": prompt_text,
-            "role": role.value,
-            "scenario_id": DEFAULT_SCENARIO,
-        })
+    # Show the user message immediately
+    with st.chat_message("user"):
+        st.markdown(prompt_text)
 
-    response = result.get("final_response", result.get("raw_response", ""))
+    # Show spinner inside the assistant bubble, then the response
+    with st.chat_message("assistant"):
+        with st.spinner("The Bridge is thinking..."):
+            result = workflow.invoke({
+                "user_message": prompt_text,
+                "role": role.value,
+                "scenario_id": DEFAULT_SCENARIO,
+            })
+        response = result.get("final_response", result.get("raw_response", ""))
+        st.markdown(response)
+
     st.session_state.messages.append({"kind": "assistant", "content": response})
     st.session_state.last_result = result
 
