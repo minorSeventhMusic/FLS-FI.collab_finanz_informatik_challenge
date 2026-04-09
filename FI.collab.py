@@ -145,8 +145,20 @@ from bridge.personas import PERSONAS
 # Red top line
 st.markdown('<div class="fi-topline"></div>', unsafe_allow_html=True)
 
-# Brand
-st.markdown('<div style="color: #e30613; font-size: 1.4rem; margin: 0;">FI.<span style="font-weight: 700;">collab</span></div>', unsafe_allow_html=True)
+# Brand with Sparkasse logo
+import base64
+from pathlib import Path
+
+_logo_path = Path(__file__).parent / "personas_pictures" / "Sparkasse.svg"
+_logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode()
+
+st.markdown(
+    f'<div style="display: flex; align-items: center; gap: 0.5rem;">'
+    f'<img src="data:image/svg+xml;base64,{_logo_b64}" style="height: 1.6rem;">'
+    f'<span style="color: #e30613; font-size: 1.4rem;">FI.<span style="font-weight: 700;">collab</span></span>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
 st.markdown(
     '<p class="fi-subtitle">Collaborative AI for business-technical alignment | <strong>finanz informatik</strong></p>',
     unsafe_allow_html=True,
