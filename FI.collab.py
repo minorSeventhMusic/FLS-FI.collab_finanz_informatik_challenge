@@ -227,7 +227,7 @@ if selected_label != "Select your role...":
             st.caption("Customer-facing loan calculator with 0% APR promotional support")
             st.caption("Alignment: Critical gaps detected | Open tickets: JIRA-104")
         with proj_col2:
-            if st.button("\U0001f4ac Open in Chat", use_container_width=True):
+            if st.button("Open in Chat", use_container_width=True):
                 st.session_state["selected_landing_role"] = selected_label
                 st.switch_page("pages/1_Chat.py")
 
