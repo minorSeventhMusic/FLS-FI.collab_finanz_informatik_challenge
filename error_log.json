@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-04-09T18:16:43.721868",
+    "error_type": "ValueError",
+    "error_message": "annual_interest_rate must be less than or equal to 15",
+    "inputs": {
+      "loan_amount": 1200.0,
+      "loan_duration_months": 12,
+      "annual_interest_rate": 16.0
+    }
+  }
+]

@@ -7,6 +7,9 @@ Currently supports:
 """
 
 import math
+import json
+from datetime import datetime
+from pathlib import Path
 
 
 # ── Core Calculation ─────────────────────────────────────────────────────────
@@ -53,6 +56,31 @@ def calculate_monthly_payment(loan_amount, loan_duration_months, annual_interest
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
 
+def log_error(error_type, error_message, inputs):
+    """Append an error entry to error_log.json for offline analysis."""
+    log_file = Path(__file__).parent / "error_log.json"
+    error_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "error_type": error_type,
+        "error_message": error_message,
+        "inputs": inputs,
+    }
+
+    try:
+        if log_file.exists():
+            with open(log_file, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        else:
+            logs = []
+
+        logs.append(error_entry)
+
+        with open(log_file, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=2)
+    except Exception as e:
+        print(f"\n  ⚠ Logging failed: {e}\n")
+
+
 def main():
     print("\n🏦 LOAN CALCULATOR v1.0\n")
 
@@ -64,10 +92,14 @@ def main():
         choice = input("Choice: ").strip().lower()
 
         if choice == "1":
+            inputs = {}
             try:
                 amount = float(input("  Loan amount (€): "))
+                inputs["loan_amount"] = amount
                 months = int(input("  Duration (months): "))
+                inputs["loan_duration_months"] = months
                 rate = float(input("  Annual interest rate (%): "))
+                inputs["annual_interest_rate"] = rate
 
                 result = calculate_monthly_payment(amount, months, rate)
 
@@ -77,6 +109,7 @@ def main():
 
             except (ValueError, TypeError) as e:
                 print(f"\n  ⚠ Error: {e}\n")
+                log_error(type(e).__name__, str(e), inputs)
 
         elif choice == "2":
             print("\n  ⚠ Not yet implemented. See BUSINESS_REQUIREMENT.md\n")
