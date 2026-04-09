@@ -1,5 +1,6 @@
 [server]
-address = "127.0.0.1"
+address = "localhost"
+headless = true
 
 [theme]
 base = "light"
