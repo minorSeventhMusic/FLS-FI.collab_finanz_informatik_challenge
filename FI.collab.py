@@ -156,10 +156,17 @@ st.markdown("---")
 
 # Sign in dropdown — just name (role)
 _role_options = {p.display_name: r for r, p in PERSONAS.items()}
+_all_options = ["Select your role..."] + list(_role_options.keys())
+_default_idx = 0
+if "selected_landing_role" in st.session_state:
+    prev = st.session_state["selected_landing_role"]
+    if prev in _all_options:
+        _default_idx = _all_options.index(prev)
+
 selected_label = st.selectbox(
     "Sign in as",
-    ["Select your role..."] + list(_role_options.keys()),
-    index=0,
+    _all_options,
+    index=_default_idx,
     key="landing_role",
 )
 
