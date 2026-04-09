@@ -124,18 +124,20 @@ def _rule_based_intent(message: str) -> Intent:
 
 def classify_intent(state: BridgeState) -> Dict[str, Any]:
     _ensure_services()
-    prompt = INTENT_CLASSIFICATION_PROMPT.format(
-        role=state["role"],
-        user_message=state["user_message"],
-    )
-    raw = _llm.generate(prompt, state["user_message"])
-    raw_clean = raw.strip().lower().replace(" ", "_")
+    intent = _rule_based_intent(state["user_message"])
 
-    try:
-        intent = Intent(raw_clean)
-    except ValueError:
-        # LLM returned something unexpected — fall back to rule-based
-        intent = _rule_based_intent(state["user_message"])
+    # Only use LLM for ambiguous cases (GENERAL) where keywords didn't match
+    if intent == Intent.GENERAL:
+        prompt = INTENT_CLASSIFICATION_PROMPT.format(
+            role=state["role"],
+            user_message=state["user_message"],
+        )
+        raw = _llm.generate(prompt, state["user_message"])
+        raw_clean = raw.strip().lower().replace(" ", "_")
+        try:
+            intent = Intent(raw_clean)
+        except ValueError:
+            pass  # keep GENERAL
 
     return {"intent": intent.value}
 

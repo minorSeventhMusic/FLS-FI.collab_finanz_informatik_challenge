@@ -4,6 +4,10 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Protocol
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class TTSClient(Protocol):
     def synthesize(self, text: str, voice_id: str) -> bytes:

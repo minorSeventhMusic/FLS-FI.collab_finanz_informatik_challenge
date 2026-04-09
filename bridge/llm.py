@@ -5,6 +5,10 @@ import os
 from dataclasses import dataclass
 from typing import Protocol
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class LLMClient(Protocol):
     def generate(self, system_prompt: str, user_prompt: str) -> str:

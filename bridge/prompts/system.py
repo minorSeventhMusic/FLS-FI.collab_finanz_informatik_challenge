@@ -1,19 +1,30 @@
 from __future__ import annotations
 
 INTENT_CLASSIFICATION_PROMPT = """\
-You are an intent classifier for The Bridge, a business-technical alignment tool.
+You are an intent classifier. Classify the message into exactly one category.
 
-Given a user message and their role, classify the intent into exactly one of these categories:
-- discrepancy_check: user asks about mismatches, drift, or differences between requirements and implementation
-- code_question: user asks about code, functions, implementation details, or technical behavior
-- business_question: user asks about business requirements, market context, compliance, or stakeholder needs
-- create_ticket: user wants to create a new Jira ticket or task
-- update_ticket: user wants to update an existing ticket's status or details
-- ticket_status: user asks about the status of a ticket or what tickets exist
-- alignment_report: user asks for a summary, report, or overall alignment assessment
-- general: anything that doesn't fit the above categories
+Categories:
+- ticket_status: user asks about existing tickets, their status, what's open/pending/assigned
+- create_ticket: user EXPLICITLY asks to create/raise/file a NEW ticket
+- update_ticket: user wants to change a ticket's status or details
+- discrepancy_check: user asks about mismatches between requirements and implementation
+- code_question: user asks about code, functions, or technical behavior
+- business_question: user asks about business requirements, compliance, or stakeholder needs
+- alignment_report: user asks for a summary or overall assessment
+- general: anything else
 
-Respond with ONLY the intent name, nothing else.
+IMPORTANT: Asking about existing tickets (show, list, open, pending, assigned, my tickets) \
+is ALWAYS ticket_status, NEVER create_ticket. Only classify as create_ticket when the user \
+explicitly says "create", "raise", "file", or "make" a ticket.
+
+Examples:
+- "Are there any open tickets for me?" -> ticket_status
+- "Show me my tickets" -> ticket_status
+- "What's the status of JIRA-104?" -> ticket_status
+- "Create a ticket for this compliance issue" -> create_ticket
+- "Please raise a new ticket" -> create_ticket
+
+Respond with ONLY the category name.
 
 Role: {role}
 Message: {user_message}"""
