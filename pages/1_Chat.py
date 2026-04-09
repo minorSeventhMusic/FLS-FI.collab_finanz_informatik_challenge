@@ -161,6 +161,7 @@ voice_responses = st.sidebar.toggle(
     value=st.session_state.get("voice_responses", False),
     help="Read responses aloud using ElevenLabs",
 )
+st.session_state.voice_responses = voice_responses
 
 # Handle role switch — new persona = new user logging in
 if "current_role" not in st.session_state:
@@ -330,18 +331,22 @@ with col_mic:
 with col_chat:
     prompt = st.chat_input("Ask about alignment, discrepancies, tickets, or request a report...")
 
-# Handle mic recording
+# Handle mic recording — track audio ID to avoid reprocessing on rerun
 if audio and audio.get("bytes"):
-    with st.spinner("Transcribing..."):
-        transcription = st.session_state.stt.transcribe(
-            audio["bytes"],
-            mime_type="audio/webm",
-        )
-    if transcription and not transcription.startswith("("):
-        _run_turn(transcription)
-        st.rerun()
-    elif transcription:
-        st.warning("Could not transcribe audio. Please try again or type your question.")
+    audio_id = audio.get("id", 0)
+    last_id = st.session_state.get("_last_audio_id", 0)
+    if audio_id != last_id:
+        st.session_state["_last_audio_id"] = audio_id
+        with st.spinner("Transcribing..."):
+            transcription = st.session_state.stt.transcribe(
+                audio["bytes"],
+                mime_type="audio/webm",
+            )
+        if transcription and not transcription.startswith("("):
+            _run_turn(transcription)
+            st.rerun()
+        elif transcription:
+            st.warning("Could not transcribe audio. Please try again or type your question.")
 
 # Handle text input
 if prompt:
