@@ -129,8 +129,6 @@ def _run_turn(prompt_text: str):
 
 # ── Sidebar ──────────────────────────────────────────────────────────────
 
-st.sidebar.title("FI.collab")
-st.sidebar.markdown("---")
 
 # Role selector — pick up landing page selection if available
 from bridge.personas import PERSONAS
