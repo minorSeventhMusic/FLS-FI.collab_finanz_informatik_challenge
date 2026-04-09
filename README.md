@@ -21,6 +21,33 @@ python -m pip install -r requirements.txt
 ./.venv/bin/streamlit run app.py
 ```
 
+### Run the speech-to-text backend
+
+Set your OpenAI API key first:
+
+```bash
+export OPENAI_API_KEY="your-api-key"
+```
+
+Start the FastAPI server:
+
+```bash
+./.venv/bin/uvicorn backend.main:app --reload
+```
+
+The transcription endpoint will be available at:
+
+```text
+POST /api/transcribe
+```
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/transcribe \
+  -F "file=@sample-audio.webm"
+```
+
 ### Quick checks
 
 ```bash

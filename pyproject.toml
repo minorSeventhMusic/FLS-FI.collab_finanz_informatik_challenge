@@ -10,12 +10,15 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
   "langgraph>=0.6",
+  "fastapi>=0.115",
   "streamlit>=1.50",
   "openai>=2.0",
+  "uvicorn>=0.30",
   "langsmith",
   "google-genai",
   "elevenlabs",
   "python-dotenv",
+  "python-multipart>=0.0.9",
 ]
 
 [tool.setuptools.packages.find]
