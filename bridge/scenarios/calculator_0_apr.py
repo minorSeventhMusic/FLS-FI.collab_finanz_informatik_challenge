@@ -348,6 +348,53 @@ PERSONA_CONFLICTS = """\
 """
 
 
+# === Persona Detail Files (from origin/business personas/) ===
+
+PERSONA_PRODUCT_MANAGER = """\
+Focus: Value Proposition and Market Fit.
+
+Role: Defines the "Why." They decide if the calculator should prioritize lead generation \
+(gathering emails) or transparency (detailed math).
+
+Human Profile: Likely a Millennial (32-40) with a background in FinTech. They are focused \
+on the "Conversion Funnel" — ensuring that a user who calculates a loan actually clicks \
+the "Apply" button.
+
+Key Question: "Does this tool solve the user's pain point faster than our competitor's tool?"
+"""
+
+PERSONA_COMPLIANCE_OFFICER = """\
+Focus: Regulatory Adherence and Risk Mitigation.
+
+Role: Ensures the code follows Truth in Lending laws. They dictate the "fine print" and \
+ensure the APR (Annual Percentage Rate) is calculated and displayed exactly as the law requires.
+
+Human Profile: Typically Gen X (45-55). They are risk-averse and prioritize accuracy over \
+"sleek" UI. They often have children and understand the legal protections needed for family \
+financial planning.
+
+Key Question: "Are the mandatory disclosures visible enough to avoid a lawsuit?"
+"""
+
+
+# === Sales Complaint (from origin/mockup_tech + origin/business) ===
+
+SALES_COMPLAINT = """\
+From: Sales & Marketing Team
+To: Product Manager
+
+Subject: Help! We can't set up our "Interest-Free" laptop deals
+
+We are trying to launch our big "Back to School" sale. We want to tell customers: \
+"Buy a €1,200 laptop today, pay €100 a month for a year, and pay zero fees."
+It is not working!
+
+Can you fix this?
+
+[Customer Name]
+"""
+
+
 # === Scenario Bundle ===
 
 JIRA_104 = JiraTicketData(
@@ -379,6 +426,11 @@ CALCULATOR_0_APR_SCENARIO = ScenarioBundle(
     jira_tickets=[JIRA_104],
     stakeholder_comms=STAKEHOLDER_EMAIL,
     persona_conflicts=PERSONA_CONFLICTS,
+    persona_details={
+        "product_manager": PERSONA_PRODUCT_MANAGER,
+        "compliance_officer": PERSONA_COMPLIANCE_OFFICER,
+    },
+    additional_comms=[SALES_COMPLAINT],
     known_discrepancies=[
         "Stakeholder email says 0% APR is live but code rejects rate <= 0 and JIRA-104 is To Do",
         "Amortization formula divides by zero when rate is 0 but email claims it works",
@@ -388,5 +440,6 @@ CALCULATOR_0_APR_SCENARIO = ScenarioBundle(
         "Business requirements describe complex system (TCC, APIs, CRM) but code is basic CLI",
         "Persona conflicts (PM vs Compliance vs Marketing vs Risk vs UX) unresolved in technical scope",
         "JIRA acceptance criteria reference 'Technical Constraints' section that doesn't exist in docs",
+        "Sales team complaint confirms real users are blocked by the 0% issue — not just theoretical",
     ],
 )

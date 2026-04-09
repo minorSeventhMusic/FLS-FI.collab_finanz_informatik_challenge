@@ -100,10 +100,21 @@ def assemble(
     sections.append(f"=== JIRA TICKETS ===\n{jira_text}")
 
     # Stakeholder communications — always included (contains the lie to catch)
-    sections.append(f"=== STAKEHOLDER COMMUNICATIONS ===\n{scenario.stakeholder_comms}")
+    all_comms = scenario.stakeholder_comms
+    if scenario.additional_comms:
+        all_comms += "\n\n---\n\n" + "\n\n---\n\n".join(scenario.additional_comms)
+    sections.append(f"=== STAKEHOLDER COMMUNICATIONS ===\n{all_comms}")
 
     # Persona conflicts — always included
     sections.append(f"=== PERSONA CONFLICTS ===\n{scenario.persona_conflicts}")
+
+    # Persona details — if available
+    if scenario.persona_details:
+        details = "\n\n".join(
+            f"--- {name} ---\n{detail}"
+            for name, detail in scenario.persona_details.items()
+        )
+        sections.append(f"=== PERSONA DETAILS ===\n{details}")
 
     context_string = "\n\n".join(sections)
 

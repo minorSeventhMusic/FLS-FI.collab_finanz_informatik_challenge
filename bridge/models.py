@@ -45,6 +45,8 @@ class ScenarioBundle:
     stakeholder_comms: str
     persona_conflicts: str
     known_discrepancies: List[str]
+    persona_details: Dict[str, str] = field(default_factory=dict)
+    additional_comms: List[str] = field(default_factory=list)
 
 
 @dataclass
