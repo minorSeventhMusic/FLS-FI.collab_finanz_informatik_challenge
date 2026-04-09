@@ -79,13 +79,22 @@ def capture_calculator_errors():
 def analyze_errors_with_gemini(api_key, errors):
     """Analyze the combined batch of errors with Gemini."""
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-pro")
-    
+
     summary = "\n".join([f"- {e['test_case']}: {e['error_type']} ({e['error_message']})" for e in errors])
     prompt = f"Analyze these Python calculator errors and suggest fixes:\n\n{summary}"
-    
-    response = model.generate_content(prompt)
-    return response.text
+
+    # Try newer supported models first, then fall back.
+    model_names = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]
+    last_error = None
+    for model_name in model_names:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            last_error = e
+
+    raise RuntimeError(f"Gemini analysis failed for all models: {last_error}")
 
 def write_report_markdown(analysis_text, errors):
     """Persist error report to rotating slots (max 3 files)."""
@@ -125,6 +134,22 @@ def write_report_markdown(analysis_text, errors):
     ticket_file.write_text(markdown_content, encoding="utf-8")
     return ticket_file
 
+def cleanup_old_reports(output_dir):
+    """Delete only the oldest reports if count exceeds MAX_GENERATED_REPORTS."""
+    reports = sorted(
+        output_dir.glob("error_report_slot_*.md"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    if len(reports) <= MAX_GENERATED_REPORTS:
+        return []
+
+    to_delete = reports[MAX_GENERATED_REPORTS:]
+    for report_file in to_delete:
+        report_file.unlink()
+    return to_delete
+
 def main():
     print("\n" + "="*40)
     print("🤖 STARTING ERROR ANALYSIS AGENT")
@@ -159,15 +184,21 @@ def main():
             print(f"✓ Success! Report saved to: {report_path.name}")
         except Exception as e:
             print(f"✗ Analysis failed: {e}")
+            fallback_analysis = (
+                "Analysis could not be completed due to API/model error.\n\n"
+                f"Captured exception: {e}"
+            )
+            report_path = write_report_markdown(fallback_analysis, all_errors)
+            print(f"✓ Fallback report saved to: {report_path.name}")
 
     print("="*40)
     print("🎉 Run Complete. Check slot files for details.")
 
-    # Cleanup: Delete all error report files after program ends
+    # Cleanup: Delete only excess old reports beyond the configured limit
     output_dir = Path(__file__).parent
-    for report_file in output_dir.glob("error_report_slot_*.md"):
-        report_file.unlink()
-        print(f"🗑 Cleaned up: {report_file.name}")
+    deleted_reports = cleanup_old_reports(output_dir)
+    for report_file in deleted_reports:
+        print(f"🗑 Cleaned up old report: {report_file.name}")
 
 if __name__ == "__main__":
     main()
