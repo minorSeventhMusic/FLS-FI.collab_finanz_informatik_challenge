@@ -1,5 +1,9 @@
-.venv/
 __pycache__/
-.pycache/
-.pytest_cache/
-.streamlit/
+*.pyc
+.fls/
+project_state.json
+.env
+.DS_Store
+*.egg-info/
+dist/
+build/

@@ -2,129 +2,149 @@ from __future__ import annotations
 
 import streamlit as st
 
-from components.sidebar_sections import render_role_section, render_ticket_section
-from services.agent_client import (
-    build_assistant_status,
-    build_chat_input_placeholder,
-    build_mock_agent_reply,
-    build_starter_message,
-)
-from services.mock_data import Role, Ticket
-from utils.state import (
-    append_chat_message,
-    get_active_tickets,
-    get_chat_history,
-    get_history_tickets,
-    get_selected_ticket,
-    initialize_session_state,
-)
-
-
 st.set_page_config(
-    page_title="Ticket Copilot Demo",
-    page_icon=":ticket:",
+    page_title="The Bridge",
+    page_icon="\U0001f309",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
+# Custom CSS for polished look
+st.markdown("""
+<style>
+    /* Main header styling */
+    .main-header {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 0.2rem;
+    }
+    .sub-header {
+        font-size: 1.0rem;
+        color: #6c757d;
+        margin-bottom: 1.5rem;
+    }
 
-def render_workspace_header(ticket: Ticket, current_role: Role) -> None:
-    st.caption("Collaboration assistant workspace")
-    st.title(ticket["subject"])
+    /* Severity badges */
+    .severity-critical {
+        background-color: #dc3545;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .severity-high {
+        background-color: #fd7e14;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .severity-medium {
+        background-color: #ffc107;
+        color: #212529;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .severity-low {
+        background-color: #28a745;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
 
-    ticket_col, status_col, role_col, link_col = st.columns([1.1, 1, 1.2, 1.5])
-    with ticket_col:
-        st.caption("Ticket ID")
-        st.write(ticket["id"])
-    with status_col:
-        st.caption("Status")
-        st.write(ticket["status"])
-    with role_col:
-        st.caption("Current role")
-        st.write(current_role)
-    with link_col:
-        st.caption("External ticket")
-        st.markdown(f"[Open ticket]({ticket['external_url']})")
+    /* Status badges */
+    .status-todo {
+        background-color: #6c757d;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+    .status-progress {
+        background-color: #007bff;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+    .status-done {
+        background-color: #28a745;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
 
-    st.caption(f"Last updated {ticket['updated_at']}")
+    /* Score color coding */
+    .score-low { color: #dc3545; font-weight: 700; }
+    .score-mid { color: #fd7e14; font-weight: 700; }
+    .score-high { color: #28a745; font-weight: 700; }
 
+    /* Handoff warning */
+    .handoff-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 8px 0;
+    }
 
-def render_chat_thread(ticket: Ticket, current_role: Role) -> None:
-    messages = get_chat_history(current_role, ticket["id"])
+    /* Clean sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+    }
 
-    if not messages:
-        append_chat_message(
-            current_role,
-            ticket["id"],
-            "assistant",
-            build_starter_message(ticket, current_role),
-        )
-        messages = get_chat_history(current_role, ticket["id"])
+    /* Card-like metric containers */
+    [data-testid="stMetric"] {
+        background-color: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+</style>
+""", unsafe_allow_html=True)
 
-    st.caption("Conversation")
-    st.caption(
-        f"This thread is scoped to `{ticket['id']}` and the **{current_role}** role."
-    )
+from bridge.personas import PERSONAS
 
-    for message in messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+st.markdown('<p class="main-header">\U0001f309 The Bridge</p>', unsafe_allow_html=True)
+st.markdown(
+    '<p class="sub-header">AI-powered orchestration for business-technical alignment</p>',
+    unsafe_allow_html=True,
+)
+st.markdown("---")
 
-    status_title, status_detail = build_assistant_status(ticket, current_role)
-    with st.container(border=True):
-        st.caption("Assistant status")
-        st.markdown(f"**{status_title}**")
-        st.caption(status_detail)
+st.markdown("### Welcome — select your role to get started")
+st.markdown(
+    "The Bridge adapts its language, visibility, and recommendations to your role. "
+    "Choose who you are, then head to **Chat** to start."
+)
 
-    prompt = st.chat_input(build_chat_input_placeholder(current_role))
-    if not prompt:
-        return
+_role_options = {p.display_name: r for r, p in PERSONAS.items()}
+selected_label = st.selectbox(
+    "Who are you?",
+    list(_role_options.keys()),
+    index=0,
+    key="landing_role",
+)
+selected_role = _role_options[selected_label]
 
-    append_chat_message(current_role, ticket["id"], "user", prompt)
-    assistant_reply = build_mock_agent_reply(ticket, current_role, prompt)
-    append_chat_message(current_role, ticket["id"], "assistant", assistant_reply)
-    st.rerun()
+# Store selection so Chat page picks it up
+st.session_state["selected_landing_role"] = selected_label
 
+# Show persona preview
+persona = PERSONAS[selected_role]
+with st.container(border=True):
+    st.markdown(f"**{persona.display_name}**")
+    st.caption(f"Tone: {persona.tone}")
+    st.markdown(persona.system_instructions.replace("\\n", "\n").split("Follow these rules")[0].strip())
 
-def render_empty_state() -> None:
-    st.title("Ticket Copilot Demo")
-    st.caption("Collaboration assistant for ticket review, planning, and follow-up.")
-
-    with st.container(border=True):
-        st.subheader("Open a ticket to start collaborating")
-        st.write("Choose **Open in chat** from the sidebar to load a ticket workspace.")
-        st.caption(
-            "Each role keeps its own conversation history for every ticket, which makes "
-            "handoffs easy to demo."
-        )
-        st.markdown(
-            "- Business Analyst view focuses on requirements, impact, and stakeholder alignment.\n"
-            "- Developer view focuses on implementation details, APIs, tests, and rollout risk."
-        )
-
-
-def main() -> None:
-    initialize_session_state()
-
-    with st.sidebar:
-        current_role = render_role_section()
-        st.divider()
-        render_ticket_section("Active tickets", get_active_tickets(), "active-ticket")
-        st.divider()
-        render_ticket_section("Ticket history", get_history_tickets(), "history-ticket")
-
-    _, center_column, _ = st.columns([1, 5, 1])
-
-    with center_column:
-        selected_ticket = get_selected_ticket()
-
-        if selected_ticket is None:
-            render_empty_state()
-            return
-
-        render_workspace_header(selected_ticket, current_role)
-        st.divider()
-        render_chat_thread(selected_ticket, current_role)
-
-
-if __name__ == "__main__":
-    main()
+st.markdown("---")
+st.markdown("Navigate to **Chat**, **Dashboard**, or **Reports** in the sidebar.")
