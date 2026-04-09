@@ -139,7 +139,7 @@ from bridge.personas import PERSONAS
 st.markdown('<div class="fi-topline"></div>', unsafe_allow_html=True)
 
 # Brand
-st.markdown('<p class="fi-brand">FI.<span class="fi-brand-bold">collab</span></p>', unsafe_allow_html=True)
+st.markdown('<div style="color: #e30613; font-size: 1.4rem; margin: 0;">FI.<span style="font-weight: 700;">collab</span></div>', unsafe_allow_html=True)
 st.markdown(
     '<p class="fi-subtitle">Collaborative AI for business-technical alignment | <strong>finanz informatik</strong></p>',
     unsafe_allow_html=True,
@@ -174,7 +174,7 @@ if selected_label != "Select your role...":
     with col_info:
         with st.container(border=True):
             st.markdown(
-                f'<div style="color: #e30613; font-size: 3rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.25rem;">{persona.display_name}</div>',
+                f'<div style="color: #e30613; font-size: 1.5rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.25rem;">{persona.display_name}</div>',
                 unsafe_allow_html=True,
             )
             st.markdown(
@@ -188,7 +188,7 @@ if selected_label != "Select your role...":
 
     # Projects section
     st.markdown(
-        '<div style="color: #e30613; font-size: 3.6rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2;">Your Projects</div>',
+        '<div style="color: #e30613; font-size: 1.8rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2;">Your Projects</div>',
         unsafe_allow_html=True,
     )
     with st.container(border=True):
