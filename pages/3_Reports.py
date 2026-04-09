@@ -29,13 +29,14 @@ st.markdown("---")
 col1, col2 = st.columns(2)
 
 with col1:
+    from bridge.personas import PERSONAS
+    _role_options = {p.display_name: r for r, p in PERSONAS.items()}
     role_label = st.selectbox(
         "Report recipient",
-        ["Business Analyst", "Developer"],
+        list(_role_options.keys()),
         help="The report language and focus adapts to the selected role.",
     )
-    role_map = {"Business Analyst": Role.BUSINESS_ANALYST, "Developer": Role.DEVELOPER}
-    role = role_map[role_label]
+    role = _role_options[role_label]
 
 with col2:
     report_type = st.selectbox(

@@ -82,8 +82,13 @@ class StubSTT:
 
 # ElevenLabs default voice IDs — replace with your preferred voices
 VOICE_MAP = {
-    "business_analyst": "EXAVITQu4vr4xnSDxMaL",   # "Sarah" — warm, professional
-    "developer": "JBFqnCBsd6RMkjVDRZzb",           # "George" — clear, precise
+    "business_analyst": "EXAVITQu4vr4xnSDxMaL",   # "Sarah"
+    "developer": "JBFqnCBsd6RMkjVDRZzb",           # "George"
+    "product_manager": "TX3LPaxmHKxFdv7VOQHJ",     # "Liam"
+    "compliance_officer": "XB0fDUnXU5powFXDhCwa",   # "Charlotte"
+    "marketing_manager": "EXAVITQu4vr4xnSDxMaL",   # "Sarah"
+    "risk_analyst": "JBFqnCBsd6RMkjVDRZzb",        # "George"
+    "ux_designer": "TX3LPaxmHKxFdv7VOQHJ",         # "Liam"
 }
 
 

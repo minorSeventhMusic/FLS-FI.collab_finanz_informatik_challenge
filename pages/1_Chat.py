@@ -113,14 +113,23 @@ def _run_turn(prompt_text: str):
 st.sidebar.title("\U0001f309 The Bridge")
 st.sidebar.markdown("---")
 
-# Role selector
-role_label = st.sidebar.radio(
+# Role selector — pick up landing page selection if available
+from bridge.personas import PERSONAS
+_role_options = {p.display_name: r for r, p in PERSONAS.items()}
+_role_names = list(_role_options.keys())
+_default_idx = 0
+if "selected_landing_role" in st.session_state:
+    landing = st.session_state["selected_landing_role"]
+    if landing in _role_names:
+        _default_idx = _role_names.index(landing)
+
+role_label = st.sidebar.selectbox(
     "Select Role (Mock SSO)",
-    ["Business Analyst", "Developer"],
+    _role_names,
+    index=_default_idx,
     help="Simulates single sign-on. The Bridge adapts its responses to your role.",
 )
-role_map = {"Business Analyst": Role.BUSINESS_ANALYST, "Developer": Role.DEVELOPER}
-role = role_map[role_label]
+role = _role_options[role_label]
 
 # Voice mode toggle
 voice_enabled = st.sidebar.toggle(

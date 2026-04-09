@@ -8,6 +8,11 @@ from typing import Dict, List, Optional, TypedDict
 class Role(str, Enum):
     BUSINESS_ANALYST = "business_analyst"
     DEVELOPER = "developer"
+    PRODUCT_MANAGER = "product_manager"
+    COMPLIANCE_OFFICER = "compliance_officer"
+    MARKETING_MANAGER = "marketing_manager"
+    RISK_ANALYST = "risk_analyst"
+    UX_DESIGNER = "ux_designer"
 
 
 class Intent(str, Enum):

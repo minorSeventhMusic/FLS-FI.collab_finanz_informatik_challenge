@@ -112,12 +112,39 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+from bridge.personas import PERSONAS
+
 st.markdown('<p class="main-header">\U0001f309 The Bridge</p>', unsafe_allow_html=True)
 st.markdown(
     '<p class="sub-header">AI-powered orchestration for business-technical alignment</p>',
     unsafe_allow_html=True,
 )
 st.markdown("---")
+
+st.markdown("### Welcome — select your role to get started")
 st.markdown(
-    "Use the sidebar to navigate between **Chat**, **Dashboard**, and **Reports**."
+    "The Bridge adapts its language, visibility, and recommendations to your role. "
+    "Choose who you are, then head to **Chat** to start."
 )
+
+_role_options = {p.display_name: r for r, p in PERSONAS.items()}
+selected_label = st.selectbox(
+    "Who are you?",
+    list(_role_options.keys()),
+    index=0,
+    key="landing_role",
+)
+selected_role = _role_options[selected_label]
+
+# Store selection so Chat page picks it up
+st.session_state["selected_landing_role"] = selected_label
+
+# Show persona preview
+persona = PERSONAS[selected_role]
+with st.container(border=True):
+    st.markdown(f"**{persona.display_name}**")
+    st.caption(f"Tone: {persona.tone}")
+    st.markdown(persona.system_instructions.replace("\\n", "\n").split("Follow these rules")[0].strip())
+
+st.markdown("---")
+st.markdown("Navigate to **Chat**, **Dashboard**, or **Reports** in the sidebar.")
