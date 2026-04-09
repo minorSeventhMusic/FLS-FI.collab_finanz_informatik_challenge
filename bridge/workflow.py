@@ -67,12 +67,16 @@ def _extract_ticket_fields(response: str) -> tuple:
         stripped = line.strip().lstrip("-•").strip()
         lowered = stripped.lower()
 
-        # Extract Summary/Title
+        # Extract Summary/Title from labeled field
         if not title:
             for prefix in ("summary:", "title:", "subject:"):
                 if lowered.startswith(prefix):
                     title = stripped[len(prefix):].strip().strip("*").strip()
                     break
+
+        # Extract from "JIRA-NNN: Title" format (LLM hallucinated ticket ID)
+        if not title and _re.match(r"^(JIRA|BRIDGE)-\d+[:\s]", stripped):
+            title = _re.sub(r"^(JIRA|BRIDGE)-\d+[:\s]+", "", stripped).strip().strip("*")
 
         # Extract Priority
         if lowered.startswith("priority:"):
@@ -88,6 +92,9 @@ def _extract_ticket_fields(response: str) -> tuple:
 
     # Clean title
     title = title.replace("**", "").replace("*", "")
+    # Skip lines that are just headers like "JIRA Ticket Created:"
+    if title.lower() in ("jira ticket created", "ticket created", "created", ""):
+        title = ""
     if len(title) > 120:
         title = title[:117] + "..."
 
