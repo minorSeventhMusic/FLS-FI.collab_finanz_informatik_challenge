@@ -86,13 +86,14 @@ def assemble_context(state: BridgeState) -> Dict[str, Any]:
     scenario_id = state.get("scenario_id", DEFAULT_SCENARIO)
     scenario = get_scenario(scenario_id)
 
-    # Seed Jira tickets
+    # Seed Jira tickets and get all live tickets
     _jira.ensure_seed_tickets(scenario)
+    live_tickets = _jira.list_tickets()
 
     # Load conversation history
     history = _store.get_conversations(role)
 
-    result = assemble(role, intent, scenario, state["user_message"], history)
+    result = assemble(role, intent, scenario, state["user_message"], history, live_tickets)
 
     return {
         "assembled_context": result.context_string,

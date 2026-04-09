@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from bridge.config import MAX_CONTEXT_CHARS, MAX_CONVERSATION_HISTORY_TURNS
 from bridge.models import ConversationEntry, Intent, Role, ScenarioBundle
@@ -70,6 +70,7 @@ def assemble(
     scenario: ScenarioBundle,
     user_message: str,
     conversation_history: List[ConversationEntry],
+    live_tickets: Optional[List] = None,
 ) -> ContextResult:
     persona = get_persona(role)
     relevant_files = _select_relevant_files(user_message, scenario.repo_files)
@@ -95,8 +96,18 @@ def assemble(
             sections.append("=== REPOSITORY FILES ===\n" + "\n\n".join(file_sections))
         sections.append(f"=== TECHNICAL DOCUMENTATION ===\n{scenario.technical_documentation}")
 
-    # Jira tickets — always included
-    jira_text = "\n\n".join(t.description for t in scenario.jira_tickets)
+    # Jira tickets — use live tickets from store if available, else scenario seeds
+    if live_tickets:
+        ticket_entries = []
+        for t in live_tickets:
+            entry = f"**{t.key}**: {t.title}\nStatus: {t.status} | Priority: {t.priority}"
+            if t.assignee:
+                entry += f" | Assignee: {t.assignee}"
+            entry += f"\n{t.description[:500]}"
+            ticket_entries.append(entry)
+        jira_text = "\n\n---\n\n".join(ticket_entries)
+    else:
+        jira_text = "\n\n".join(t.description for t in scenario.jira_tickets)
     sections.append(f"=== JIRA TICKETS ===\n{jira_text}")
 
     # Stakeholder communications — always included (contains the lie to catch)
