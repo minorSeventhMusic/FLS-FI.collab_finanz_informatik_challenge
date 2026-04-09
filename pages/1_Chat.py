@@ -146,7 +146,7 @@ voice_enabled = st.sidebar.toggle(
 )
 st.session_state.voice_enabled = voice_enabled
 
-# Handle role switch
+# Handle role switch — new persona = new user logging in
 if "current_role" not in st.session_state:
     st.session_state.current_role = role_label
 if st.session_state.current_role != role_label:
@@ -154,15 +154,17 @@ if st.session_state.current_role != role_label:
     st.session_state.last_result = None
     st.session_state.active_ticket_key = None
     st.session_state.last_audio = None
+    st.session_state.messages = []
+    st.session_state.pending_resume = False
 
+    # Check for prior persisted conversations for this persona
     recent = _get_recent_history(role)
     if recent:
         st.session_state.messages = _history_to_messages(recent)
-        st.session_state.pending_resume = False
     else:
         all_convos = st.session_state.store.get_conversations(role)
-        st.session_state.messages = []
-        st.session_state.pending_resume = bool(all_convos)
+        if all_convos:
+            st.session_state.pending_resume = True
     st.rerun()
 
 st.sidebar.markdown("---")
