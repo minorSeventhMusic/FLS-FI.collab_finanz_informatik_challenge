@@ -92,7 +92,14 @@ def _run_turn(prompt_text: str):
 
     # Show spinner inside the assistant bubble, then the response
     with st.chat_message("assistant"):
-        with st.spinner("The Bridge is thinking..."):
+        import random
+        _verbs = [
+            "thinking", "pondering", "contemplating", "rummaging",
+            "investigating", "deliberating", "analyzing", "scrutinizing",
+            "deciphering", "connecting", "correlating", "untangling",
+            "assembling", "cross-checking", "synthesizing",
+        ]
+        with st.spinner(f"FI.collab is {random.choice(_verbs)}..."):
             result = workflow.invoke({
                 "user_message": prompt_text,
                 "role": role.value,
@@ -144,7 +151,7 @@ role_label = st.sidebar.selectbox(
     "Select Role (Mock SSO)",
     _role_names,
     index=_default_idx,
-    help="Simulates single sign-on. The Bridge adapts its responses to your role.",
+    help="Simulates single sign-on. FI.collab adapts its responses to your role.",
 )
 role = _role_options[role_label]
 

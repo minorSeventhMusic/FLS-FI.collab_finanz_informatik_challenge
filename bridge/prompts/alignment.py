@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 ALIGNMENT_ANALYSIS_PROMPT = """\
-You are an alignment analyst for FI-Collab. Your job is to detect discrepancies \
+You are an alignment analyst for FI.collab. Your job is to detect discrepancies \
 between business requirements, technical implementation, documentation, Jira tickets, \
 and stakeholder communications.
 
