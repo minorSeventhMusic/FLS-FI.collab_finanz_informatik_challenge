@@ -220,6 +220,8 @@ if selected_label != "Select your role...":
         '<div style="color: #e30613; font-size: 1.8rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2;">Your Projects</div>',
         unsafe_allow_html=True,
     )
+
+    # Project 1: FlexiLoan (bundled scenario)
     with st.container(border=True):
         proj_col1, proj_col2 = st.columns([3, 1])
         with proj_col1:
@@ -227,8 +229,23 @@ if selected_label != "Select your role...":
             st.caption("Customer-facing loan calculator with 0% APR promotional support")
             st.caption("Alignment: Critical gaps detected | Open tickets: JIRA-104")
         with proj_col2:
-            if st.button("Open in Chat", use_container_width=True):
+            if st.button("Open in Chat", key="proj-flexiloan", use_container_width=True):
                 st.session_state["selected_landing_role"] = selected_label
+                st.session_state["active_project"] = "calculator_0_apr"
+                st.switch_page("pages/1_Chat.py")
+
+    # Project 2: GitHub repo (live)
+    with st.container(border=True):
+        proj_col1, proj_col2 = st.columns([3, 1])
+        with proj_col1:
+            st.markdown("**Loan Calculator** \u2014 [GitHub](https://github.com/skleinke/ChefTreffHackFIChallenge_v2)")
+            st.caption("Live repository: skleinke/ChefTreffHackFIChallenge_v2")
+            st.caption("Source: GitHub API | Files fetched on connect")
+        with proj_col2:
+            if st.button("Open in Chat", key="proj-github", use_container_width=True):
+                st.session_state["selected_landing_role"] = selected_label
+                st.session_state["active_project"] = "github_skleinke_ChefTreffHackFIChallenge_v2"
+                st.session_state["github_repo"] = ("skleinke", "ChefTreffHackFIChallenge_v2")
                 st.switch_page("pages/1_Chat.py")
 
     # Urgent section — high/highest priority tickets assigned to this persona

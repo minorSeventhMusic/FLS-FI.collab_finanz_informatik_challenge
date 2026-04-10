@@ -44,17 +44,20 @@ def init_services(
     _store = store or ProjectStateStore()
     _jira = jira or JiraAdapter(_store)
 
-    # Initialize vector store and pre-compute alignment once
+    # Initialize vector store — index all registered scenarios
     if _vector_store is None:
         try:
             from bridge.rag import VectorStore, build_chunks_from_scenario
-            scenario = get_scenario(DEFAULT_SCENARIO)
+            from bridge.scenarios import SCENARIOS
             _vector_store = VectorStore()
-            chunks = build_chunks_from_scenario(scenario)
-            _vector_store.add_chunks(chunks)
+            all_chunks = []
+            for sid, scenario in SCENARIOS.items():
+                all_chunks.extend(build_chunks_from_scenario(scenario))
+            _vector_store.add_chunks(all_chunks)
         except Exception:
             _vector_store = None
 
+    # Pre-compute alignment for the default scenario (bundled data only)
     global _cached_alignment
     if _cached_alignment is None:
         try:
