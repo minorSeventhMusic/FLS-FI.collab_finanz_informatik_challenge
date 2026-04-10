@@ -127,10 +127,11 @@ def _run_turn(prompt_text: str):
     st.session_state.messages.append({"kind": "assistant", "content": response})
     st.session_state.last_result = result
 
-    # Play audio after the message bubble — use st.audio which handles
-    # browser autoplay policies better than raw HTML audio tags
+    # Store audio for playback after rerun
     if audio_bytes:
-        st.audio(audio_bytes, format="audio/mp3", autoplay=True)
+        st.session_state.pending_audio = audio_bytes
+    else:
+        st.session_state.pending_audio = None
 
     # Auto-select newly created ticket in sidebar
     if result.get("jira_action") == "create":
@@ -319,6 +320,11 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["kind"]):
         st.markdown(msg["content"])
 
+
+# Play pending audio from last turn (survives rerun)
+if st.session_state.get("pending_audio"):
+    st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
+    st.session_state.pending_audio = None
 
 # ── Input area ───────────────────────────────────────────────────────────
 
