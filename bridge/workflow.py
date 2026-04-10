@@ -145,6 +145,9 @@ def _rule_based_intent(message: str) -> Intent:
         return Intent.DISCREPANCY_CHECK
     if any(w in lowered for w in ("report", "summary", "alignment overview", "overall")):
         return Intent.ALIGNMENT_REPORT
+    # GENERATE_TESTS — before CODE_QUESTION since "test" is in both
+    if any(w in lowered for w in ("generate test", "write test", "write unit", "create test", "test case", "test coverage", "add test")):
+        return Intent.GENERATE_TESTS
     if any(w in lowered for w in ("code", "function", "implementation", "calculate", "validation", "test")):
         return Intent.CODE_QUESTION
     if any(w in lowered for w in ("business", "requirement", "stakeholder", "customer", "compliance")):

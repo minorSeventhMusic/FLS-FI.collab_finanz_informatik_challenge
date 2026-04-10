@@ -23,6 +23,7 @@ class Intent(str, Enum):
     UPDATE_TICKET = "update_ticket"
     TICKET_STATUS = "ticket_status"
     ALIGNMENT_REPORT = "alignment_report"
+    GENERATE_TESTS = "generate_tests"
     GENERAL = "general"
 
 
