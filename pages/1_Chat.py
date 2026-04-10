@@ -93,13 +93,14 @@ def _run_turn(prompt_text: str):
     import random
     import time
 
-    # Spinner while LLM thinks
     _verbs = [
         "thinking", "pondering", "contemplating", "rummaging",
         "investigating", "deliberating", "analyzing", "scrutinizing",
         "deciphering", "connecting", "correlating", "untangling",
         "assembling", "cross-checking", "synthesizing",
     ]
+
+    # Step 1: Get LLM response
     with st.chat_message("assistant"):
         with st.spinner(f"FI.collab is {random.choice(_verbs)}..."):
             result = workflow.invoke({
@@ -107,33 +108,8 @@ def _run_turn(prompt_text: str):
                 "role": role.value,
                 "scenario_id": DEFAULT_SCENARIO,
             })
-        response = result.get("final_response", result.get("raw_response", ""))
-
-        # Generate TTS if spoken responses enabled
-        audio_bytes = b""
-        if voice_responses and response:
-            persona = get_persona(role)
-            voice_id = persona.voice_id or get_voice_id(role.value)
-            audio_bytes = st.session_state.tts.synthesize(response, voice_id)
-
-        if not audio_bytes:
-            # Voice off: typewriter effect
-            def _stream_words(text):
-                for word in text.split(" "):
-                    yield word + " "
-                    time.sleep(0.03)
-            st.write_stream(_stream_words(response))
-
-    st.session_state.messages.append({"kind": "assistant", "content": response})
+    response = result.get("final_response", result.get("raw_response", ""))
     st.session_state.last_result = result
-
-    # Store audio + text for audio-first playback after rerun
-    if audio_bytes:
-        st.session_state.pending_audio = audio_bytes
-        st.session_state.pending_audio_text = response
-    else:
-        st.session_state.pending_audio = None
-        st.session_state.pending_audio_text = None
 
     # Auto-select newly created ticket in sidebar
     if result.get("jira_action") == "create":
@@ -143,6 +119,22 @@ def _run_turn(prompt_text: str):
                 st.session_state.active_ticket_key = jp["key"]
         except json.JSONDecodeError:
             pass
+
+    # Step 2: If voice on, generate audio and defer both text + audio to next render
+    if voice_responses and response:
+        persona = get_persona(role)
+        voice_id = persona.voice_id or get_voice_id(role.value)
+        audio_bytes = st.session_state.tts.synthesize(response, voice_id)
+        if audio_bytes:
+            st.session_state.pending_audio = audio_bytes
+            st.session_state.pending_audio_text = response
+            # Don't add to messages yet — will be added after audio playback
+            return
+
+    # Step 3: Voice off — add message and typewriter
+    st.session_state.messages.append({"kind": "assistant", "content": response})
+    st.session_state.pending_audio = None
+    st.session_state.pending_audio_text = None
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────
@@ -323,11 +315,14 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 
-# Play pending audio from last turn, then typewriter the text alongside
+# Audio-first playback: play audio, then typewriter the text
 if st.session_state.get("pending_audio"):
     import time as _time
+
+    # 1. Play audio
     st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
-    # Typewriter the text while audio plays
+
+    # 2. Typewriter the text while audio plays
     pending_text = st.session_state.get("pending_audio_text", "")
     if pending_text:
         def _stream_with_audio(text):
@@ -336,10 +331,9 @@ if st.session_state.get("pending_audio"):
                 _time.sleep(0.04)
         with st.chat_message("assistant"):
             st.write_stream(_stream_with_audio(pending_text))
-        # Remove the last static message and replace — avoid duplicate
-        if st.session_state.messages and st.session_state.messages[-1]["content"] == pending_text:
-            st.session_state.messages.pop()
+        # Now add to message history (only place this happens for voice responses)
         st.session_state.messages.append({"kind": "assistant", "content": pending_text})
+
     st.session_state.pending_audio = None
     st.session_state.pending_audio_text = None
 
