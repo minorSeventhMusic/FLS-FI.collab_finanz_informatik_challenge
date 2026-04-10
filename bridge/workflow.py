@@ -7,7 +7,7 @@ from langgraph.graph import END, START, StateGraph
 
 from bridge.alignment import analyze_alignment
 from bridge.config import DEFAULT_SCENARIO
-from bridge.context import assemble
+from bridge.context import assemble, assemble_rag
 from bridge.jira import JiraAdapter
 from bridge.llm import LLMClient, build_llm_client
 from bridge.models import (
@@ -31,6 +31,7 @@ from bridge.scenarios import get_scenario
 _llm: LLMClient = None  # type: ignore[assignment]
 _store: ProjectStateStore = None  # type: ignore[assignment]
 _jira: JiraAdapter = None  # type: ignore[assignment]
+_vector_store = None  # type: ignore[assignment]
 
 
 def init_services(
@@ -38,10 +39,32 @@ def init_services(
     store: ProjectStateStore = None,
     jira: JiraAdapter = None,
 ) -> None:
-    global _llm, _store, _jira
+    global _llm, _store, _jira, _vector_store
     _llm = llm or build_llm_client()
     _store = store or ProjectStateStore()
     _jira = jira or JiraAdapter(_store)
+
+    # Initialize vector store and pre-compute alignment once
+    if _vector_store is None:
+        try:
+            from bridge.rag import VectorStore, build_chunks_from_scenario
+            scenario = get_scenario(DEFAULT_SCENARIO)
+            _vector_store = VectorStore()
+            chunks = build_chunks_from_scenario(scenario)
+            _vector_store.add_chunks(chunks)
+        except Exception:
+            _vector_store = None
+
+    global _cached_alignment
+    if _cached_alignment is None:
+        try:
+            from bridge.context import assemble as _full_assemble
+            from bridge.models import Intent as _Intent, Role as _Role
+            _scenario = get_scenario(DEFAULT_SCENARIO)
+            _ctx = _full_assemble(_Role.DEVELOPER, _Intent.ALIGNMENT_REPORT, _scenario, "", [])
+            _cached_alignment = analyze_alignment(_ctx.context_string, _llm)
+        except Exception:
+            pass
 
 
 def _ensure_services() -> None:
@@ -163,7 +186,11 @@ def assemble_context(state: BridgeState) -> Dict[str, Any]:
     # Load conversation history
     history = _store.get_conversations(role)
 
-    result = assemble(role, intent, scenario, state["user_message"], history, live_tickets)
+    # Use RAG if vector store is available, else fall back to full context
+    if _vector_store is not None and _vector_store.size > 0:
+        result = assemble_rag(role, state["user_message"], history, _vector_store, live_tickets)
+    else:
+        result = assemble(role, intent, scenario, state["user_message"], history, live_tickets)
 
     return {
         "assembled_context": result.context_string,

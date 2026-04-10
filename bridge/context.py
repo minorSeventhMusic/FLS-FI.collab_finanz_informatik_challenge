@@ -138,3 +138,45 @@ def assemble(
         relevant_files=relevant_files,
         conversation_history_string=history_str,
     )
+
+
+def assemble_rag(
+    role: Role,
+    user_message: str,
+    conversation_history: List[ConversationEntry],
+    vector_store: "VectorStore",
+    live_tickets: Optional[List] = None,
+    top_k: int = 5,
+) -> ContextResult:
+    """RAG-based context assembly — retrieves only relevant chunks."""
+    from bridge.rag import build_context_from_chunks
+
+    persona = get_persona(role)
+    history_str = _format_conversation_history(conversation_history)
+
+    # Retrieve relevant chunks
+    chunks = vector_store.query(user_message, top_k=top_k)
+    relevant_files = [c.id for c in chunks if c.id.startswith("repo-")]
+
+    # Build compact context from retrieved chunks
+    rag_context = build_context_from_chunks(chunks)
+
+    # Always append live tickets (small, important)
+    if live_tickets:
+        ticket_lines = []
+        for t in live_tickets:
+            line = f"{t.key}: {t.title} | Status: {t.status} | Priority: {t.priority}"
+            if t.assignee:
+                line += f" | Assignee: {t.assignee}"
+            ticket_lines.append(line)
+        rag_context += "\n\n---\n\n[Live Tickets]\n" + "\n".join(ticket_lines)
+
+    # Truncate if needed
+    if len(rag_context) > MAX_CONTEXT_CHARS:
+        rag_context = rag_context[:MAX_CONTEXT_CHARS] + "\n\n[... truncated ...]"
+
+    return ContextResult(
+        context_string=rag_context,
+        relevant_files=relevant_files,
+        conversation_history_string=history_str,
+    )
