@@ -12,6 +12,34 @@ APP_NAME = "fls_bridge_challenge"
 USER_ID = "local_user"
 
 
+def _has_api_key():
+    """Return True when at least one supported API key is configured."""
+    return bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+
+
+def _try_run_optional_agent(agent_name, agent, prompt, adk_runtime):
+    """Run agent prompt when available and configured; otherwise return fallback reason."""
+    if agent is None or adk_runtime is None:
+        return None, None
+    if not _has_api_key():
+        return None, f"{agent_name} skipped: no API key configured. Using local fallback."
+
+    try:
+        response_text = _run_agent_prompt(agent, prompt, adk_runtime)
+        if response_text:
+            return response_text.strip(), None
+        return None, None
+    except Exception as run_exc:
+        return None, f"{agent_name} unavailable, using local fallback: {run_exc}"
+
+
+def _print_calculation_results(result):
+    """Print monthly, total payment, and total interest in a consistent format."""
+    print(f"Monthly payment: {result['monthly_payment']:.2f}")
+    print(f"Total payment: {result['total_payment']:.2f}")
+    print(f"Total interest: {result['total_interest']:.2f}")
+
+
 def _now_in_app_timezone():
     """Return current datetime in configured app timezone (default Europe/Berlin)."""
     tz_name = os.getenv("APP_TIMEZONE", "Europe/Berlin")
@@ -319,32 +347,27 @@ def _extract_text_from_events(events):
 def _customer_agent_from_jira_ticket(ticket_text, error_text, customer_agent=None, adk_runtime=None):
     """Create a customer-friendly explanation from Jira acceptance criteria."""
     criteria = _extract_acceptance_criteria(ticket_text)
-    customer_message = None
 
     print("--- customer_agent Output ---")
 
-    has_api_key = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
-    if customer_agent is not None and adk_runtime is not None and has_api_key:
-        try:
-            prompt = (
-                "Write exactly this style and keep it concise: "
-                "We found this issue in our loan calculator: '<error>'. We fixed it. "
-                "Use the observed error text in place of <error>. "
-                "No extra sentences.\n\n"
-                f"Observed Error:\n- {error_text}\n\n"
-                f"Acceptance Criteria:\n- "
-                + "\n- ".join(criteria)
-            )
-            response_text = _run_agent_prompt(customer_agent, prompt, adk_runtime)
-            if response_text:
-                customer_message = response_text.strip()
-                print(customer_message)
-                print("--- End customer_agent Output ---\n")
-                return customer_message
-        except Exception as run_exc:
-            print(f"customer_agent unavailable, using local fallback: {run_exc}")
-    elif customer_agent is not None and adk_runtime is not None and not has_api_key:
-        print("customer_agent skipped: no API key configured. Using local fallback.")
+    prompt = (
+        "Write exactly this style and keep it concise: "
+        "We found this issue in our loan calculator: '<error>'. We fixed it. "
+        "Use the observed error text in place of <error>. "
+        "No extra sentences.\n\n"
+        f"Observed Error:\n- {error_text}\n\n"
+        f"Acceptance Criteria:\n- "
+        + "\n- ".join(criteria)
+    )
+    response_text, fallback_reason = _try_run_optional_agent(
+        "customer_agent", customer_agent, prompt, adk_runtime
+    )
+    if fallback_reason:
+        print(fallback_reason)
+    if response_text:
+        print(response_text)
+        print("--- End customer_agent Output ---\n")
+        return response_text
 
     customer_message = _build_local_customer_message(criteria, error_text)
     print(customer_message)
@@ -367,29 +390,25 @@ def jira_agent_handle_promo_error(exc, jira_agent=None, customer_agent=None, adk
 
     print("\n--- jira_agent Output (Jira Ticket) ---")
 
-    has_api_key = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
-
     ticket_text = None
 
-    if jira_agent is not None and adk_runtime is not None and source_text and has_api_key:
-        try:
-            prompt = (
-                "Create a Jira ticket in plain text using this information. "
-                f"Observed runtime validation error: {exc}. "
-                "Analyze the calculator source and include root cause, impact, proposed fix, and acceptance criteria.\n\n"
-                f"Calculator source:\n{source_text}\n\n"
-                f"Precomputed findings:\n{chr(10).join(findings)}"
-            )
-            response_text = _run_agent_prompt(jira_agent, prompt, adk_runtime)
-
-            if response_text:
-                print(response_text)
-                ticket_text = response_text
-                print("--- End jira_agent Output ---\n")
-        except Exception as run_exc:
-            print(f"jira_agent unavailable, using local fallback: {run_exc}")
-    elif jira_agent is not None and adk_runtime is not None and source_text and not has_api_key:
-        print("jira_agent skipped: no API key configured. Using local fallback.")
+    if source_text:
+        prompt = (
+            "Create a Jira ticket in plain text using this information. "
+            f"Observed runtime validation error: {exc}. "
+            "Analyze the calculator source and include root cause, impact, proposed fix, and acceptance criteria.\n\n"
+            f"Calculator source:\n{source_text}\n\n"
+            f"Precomputed findings:\n{chr(10).join(findings)}"
+        )
+        response_text, fallback_reason = _try_run_optional_agent(
+            "jira_agent", jira_agent, prompt, adk_runtime
+        )
+        if fallback_reason:
+            print(fallback_reason)
+        if response_text:
+            print(response_text)
+            ticket_text = response_text
+            print("--- End jira_agent Output ---\n")
 
     if not ticket_text:
         ticket_text = _build_local_jira_ticket(str(exc), findings, source_text or "")
@@ -496,9 +515,7 @@ def run_local_cli(jira_agent=None, customer_agent=None, adk_runtime=None):
             try:
                 print("Trying calculation with 0 percent interest...")
                 result = calculate_monthly_payment(amount, months, rate)
-                print(f"Monthly payment: {result['monthly_payment']:.2f}")
-                print(f"Total payment: {result['total_payment']:.2f}")
-                print(f"Total interest: {result['total_interest']:.2f}")
+                _print_calculation_results(result)
             except (ValueError, TypeError) as exc:
                 last_customer_message = jira_agent_handle_promo_error(
                     exc, jira_agent, customer_agent, adk_runtime
@@ -515,9 +532,7 @@ def run_local_cli(jira_agent=None, customer_agent=None, adk_runtime=None):
             if rate == 0:
                 print("Trying calculation with 0 percent interest...")
             result = calculate_monthly_payment(amount, months, rate)
-            print(f"Monthly payment: {result['monthly_payment']:.2f}")
-            print(f"Total payment: {result['total_payment']:.2f}")
-            print(f"Total interest: {result['total_interest']:.2f}")
+            _print_calculation_results(result)
         except (ValueError, TypeError) as exc:
             print(f"Error: {exc}")
 

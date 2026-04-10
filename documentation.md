@@ -63,6 +63,16 @@ Steps:
 If Google ADK and API key are available, agent-generated text is attempted.
 If not available, local fallback text is used.
 
+### Recent Update (2026-04-10)
+The agent code was refactored to reduce redundancy without changing behavior:
+- API key check is centralized in _has_api_key().
+- Reusable ADK-or-fallback execution is centralized in _try_run_optional_agent().
+- Repeated payment output formatting is centralized in _print_calculation_results().
+
+Result:
+- Less duplicated logic in mockup_agent.py.
+- Same runtime behavior for both ADK and local fallback paths.
+
 ### B) Interactive mode
 Run:
 
@@ -114,3 +124,23 @@ python -m pytest -q
 ```
 
 Current test scope validates calculation outputs and input validation behavior.
+
+In this workspace, the project uses a local virtual environment. Equivalent command:
+
+```bash
+/workspaces/FLS-Bridge-Challenge/.venv/bin/python -m pytest -q
+```
+
+Latest run status:
+- 10 passed
+
+Optional non-interactive agent smoke test:
+
+```bash
+/workspaces/FLS-Bridge-Challenge/.venv/bin/python mockup_agent.py --auto-error "annual_interest_rate must be greater than 0"
+```
+
+Expected behavior:
+- Script exits successfully.
+- Jira and customer output is printed.
+- Fallback path is used automatically if no API key is configured.
