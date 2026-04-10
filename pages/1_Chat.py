@@ -47,15 +47,9 @@ if "last_audio" not in st.session_state:
 _active_project = st.session_state.get("active_project", DEFAULT_SCENARIO)
 
 if "services_ready" not in st.session_state or st.session_state.get("_loaded_project") != _active_project:
-    _spinner_msg = "Loading chat module — preparing knowledge base..."
-
-    # If GitHub project, fetch files first
+    # Fetch GitHub files if needed (separate spinner)
     if st.session_state.get("github_repo") and _active_project.startswith("github_"):
-        _spinner_msg = "Connecting to GitHub repository..."
-
-    with st.spinner(_spinner_msg):
-        # Fetch GitHub files if needed
-        if st.session_state.get("github_repo") and _active_project.startswith("github_"):
+        with st.spinner("Connecting to GitHub repository..."):
             from bridge.github_client import fetch_repo_files, repo_files_to_dict
             from bridge.scenarios import build_github_scenario
             _owner, _repo = st.session_state["github_repo"]
@@ -65,7 +59,8 @@ if "services_ready" not in st.session_state or st.session_state.get("_loaded_pro
                 build_github_scenario(_file_dict, _owner, _repo)
                 st.toast(f"Fetched {len(_files)} files from GitHub", icon="\u2705")
 
-        # Reset vector store for the new project
+    # Build knowledge base (embedding + alignment)
+    with st.spinner("Loading chat module — preparing knowledge base..."):
         from bridge import workflow as _wf
         _wf._vector_store = None
         _wf._cached_alignment = None
@@ -407,7 +402,7 @@ with col_mic:
         format="webm",
     )
 with col_chat:
-    prompt = st.chat_input("Ask about alignment, discrepancies, tickets, or request a report...")
+    prompt = st.chat_input("Ask about functionalities, code, tickets or request a report...")
 
 # Handle mic recording — track audio ID to avoid reprocessing on rerun
 if audio and audio.get("bytes"):
