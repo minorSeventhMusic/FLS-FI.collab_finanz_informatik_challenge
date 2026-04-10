@@ -324,7 +324,7 @@ if _relevant:
 
 # Render message history
 for msg in st.session_state.messages:
-    _avatar = _AVATAR_USER if msg["kind"] == "user" else _AVATAR_ASSISTANT
+    _avatar = _get_user_avatar() if msg["kind"] == "user" else _AVATAR_ASSISTANT
     with st.chat_message(msg["kind"], avatar=_avatar):
         st.markdown(msg["content"])
 
