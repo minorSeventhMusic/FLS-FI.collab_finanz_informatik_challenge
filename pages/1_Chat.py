@@ -81,13 +81,17 @@ def _history_to_messages(convos):
     return msgs
 
 
+_AVATAR_USER = "personas_pictures/Sparkasse_flipped.svg"
+_AVATAR_ASSISTANT = "personas_pictures/Sparkasse.svg"
+
+
 def _run_turn(prompt_text: str):
     """Execute a conversation turn and update session state."""
     st.session_state.pending_resume = False
     st.session_state.messages.append({"kind": "user", "content": prompt_text})
 
     # Show the user message immediately
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=_AVATAR_USER):
         st.markdown(prompt_text)
 
     import random
@@ -101,7 +105,7 @@ def _run_turn(prompt_text: str):
     ]
 
     # Step 1: Get LLM response
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=_AVATAR_ASSISTANT):
         with st.spinner(f"FI.collab is {random.choice(_verbs)}..."):
             result = workflow.invoke({
                 "user_message": prompt_text,
@@ -311,7 +315,8 @@ if _relevant:
 
 # Render message history
 for msg in st.session_state.messages:
-    with st.chat_message(msg["kind"]):
+    _avatar = _AVATAR_USER if msg["kind"] == "user" else _AVATAR_ASSISTANT
+    with st.chat_message(msg["kind"], avatar=_avatar):
         st.markdown(msg["content"])
 
 
@@ -324,7 +329,7 @@ if _is_playing_audio:
 
     # Play audio and typewriter together inside a single chat bubble
     if pending_text:
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar=_AVATAR_ASSISTANT):
             # Start audio
             st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
             # Typewriter text alongside
