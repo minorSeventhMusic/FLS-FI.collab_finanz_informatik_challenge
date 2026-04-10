@@ -16,6 +16,10 @@ class JiraAdapter:
         for ticket in scenario.jira_tickets:
             existing = self.store.get_ticket(ticket.key)
             if existing:
+                # Update seed fields that may have changed (e.g., assignee added)
+                if not existing.assignee and ticket.assignee:
+                    existing.assignee = ticket.assignee
+                    self.store.upsert_ticket(existing)
                 seeded.append(existing)
             else:
                 self.store.upsert_ticket(ticket)
@@ -41,17 +45,33 @@ class JiraAdapter:
         title: str,
         description: str,
         priority: str = "Medium",
+        assignee: Optional[str] = None,
+        component: Optional[str] = None,
+        reporter: Optional[str] = None,
     ) -> JiraTicketData:
         state = self.store.load()
-        counter = len(state["tickets"]) + 200
-        key = f"BRIDGE-{counter}"
+        counter = len(state["tickets"]) + 100
+        key = f"JIRA-{counter}"
+        # Ensure unique key
+        while key in state["tickets"]:
+            counter += 1
+            key = f"JIRA-{counter}"
+
+        history = ["Created by FI.collab"]
+        if reporter:
+            history.append(f"Reporter: {reporter}")
+        if component:
+            history.append(f"Component: {component}")
+
         ticket = JiraTicketData(
             key=key,
             title=title,
             status="To Do",
             priority=priority,
             description=description,
-            history=["Created by The Bridge"],
+            assignee=assignee,
+            external_url=f"https://jira.example.com/browse/{key}",
+            history=history,
         )
         self.store.upsert_ticket(ticket)
         return ticket

@@ -8,7 +8,10 @@ from bridge.models import Role
 from bridge.persistence import ProjectStateStore
 from bridge.reports import generate_report
 
-st.set_page_config(page_title="The Bridge — Reports", page_icon="\U0001f309", layout="wide")
+st.set_page_config(page_title="FI.collab — Reports", page_icon="\U0001f91d", layout="wide")
+
+from bridge.styles import inject_shared_css
+inject_shared_css()
 
 # ── Initialize ───────────────────────────────────────────────────────────
 
@@ -20,7 +23,7 @@ if "llm" not in st.session_state:
 store = st.session_state.store
 llm = st.session_state.llm
 
-st.title("\U0001f4dd Reports")
+st.markdown('<div style="color: #e30613; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">Reports</div>', unsafe_allow_html=True)
 st.caption("Generate persona-adapted alignment and status reports")
 st.markdown("---")
 

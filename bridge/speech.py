@@ -4,6 +4,10 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Protocol
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class TTSClient(Protocol):
     def synthesize(self, text: str, voice_id: str) -> bytes:
@@ -11,7 +15,7 @@ class TTSClient(Protocol):
 
 
 class STTClient(Protocol):
-    def transcribe(self, audio_bytes: bytes) -> str:
+    def transcribe(self, audio_bytes: bytes, mime_type: str = "audio/webm") -> str:
         ...
 
 
@@ -29,7 +33,7 @@ class ElevenLabsTTS:
             audio_iter = self._client.text_to_speech.convert(
                 text=text,
                 voice_id=voice_id,
-                model_id="eleven_multilingual_v2",
+                model_id="eleven_flash_v2_5",
                 output_format="mp3_44100_128",
             )
             return b"".join(audio_iter)
@@ -37,7 +41,30 @@ class ElevenLabsTTS:
             return b""
 
 
-# ── Gemini STT ───────────────────────────────────────────────────────────
+# ── ElevenLabs STT ───────────────────────────────────────────────────────
+
+
+class ElevenLabsSTT:
+    def __init__(self, api_key: str) -> None:
+        from elevenlabs import ElevenLabs
+
+        self._client = ElevenLabs(api_key=api_key)
+
+    def transcribe(self, audio_bytes: bytes, mime_type: str = "audio/webm") -> str:
+        try:
+            result = self._client.speech_to_text.convert(
+                model_id="scribe_v2",
+                file=("recording.webm", audio_bytes, mime_type),
+                language_code="en",
+            )
+            return result.text.strip()
+        except Exception as e:
+            import streamlit as st
+            st.error(f"ElevenLabs STT error: {e.__class__.__name__}: {str(e)[:100]}")
+            return ""
+
+
+# ── Gemini STT (fallback) ────────────────────────────────────────────────
 
 
 class GeminiSTT:
@@ -47,14 +74,14 @@ class GeminiSTT:
         self._client = genai.Client(api_key=api_key)
         self._model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
-    def transcribe(self, audio_bytes: bytes) -> str:
+    def transcribe(self, audio_bytes: bytes, mime_type: str = "audio/webm") -> str:
         from google.genai import types
 
         try:
             response = self._client.models.generate_content(
                 model=self._model,
                 contents=[
-                    types.Part.from_bytes(data=audio_bytes, mime_type="audio/wav"),
+                    types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
                     "Transcribe this audio exactly. Return only the transcription text, nothing else.",
                 ],
             )
@@ -74,21 +101,20 @@ class StubTTS:
 
 @dataclass
 class StubSTT:
-    def transcribe(self, audio_bytes: bytes) -> str:
+    def transcribe(self, audio_bytes: bytes, mime_type: str = "audio/webm") -> str:
         return "(Speech-to-text unavailable in offline mode)"
 
 
 # ── Voice mapping ────────────────────────────────────────────────────────
 
-# ElevenLabs default voice IDs — replace with your preferred voices
 VOICE_MAP = {
-    "business_analyst": "EXAVITQu4vr4xnSDxMaL",   # "Sarah"
-    "developer": "JBFqnCBsd6RMkjVDRZzb",           # "George"
-    "product_manager": "TX3LPaxmHKxFdv7VOQHJ",     # "Liam"
-    "compliance_officer": "XB0fDUnXU5powFXDhCwa",   # "Charlotte"
-    "marketing_manager": "EXAVITQu4vr4xnSDxMaL",   # "Sarah"
-    "risk_analyst": "JBFqnCBsd6RMkjVDRZzb",        # "George"
-    "ux_designer": "TX3LPaxmHKxFdv7VOQHJ",         # "Liam"
+    "business_analyst": "EXAVITQu4vr4xnSDxMaL",   # "Sarah" — Tobias Klein
+    "developer": "JBFqnCBsd6RMkjVDRZzb",           # "George" — Anna Fischer
+    "product_manager": "TX3LPaxmHKxFdv7VOQHJ",     # "Liam" — Daniel Schneider
+    "compliance_officer": "XB0fDUnXU5powFXDhCwa",   # "Charlotte" — Claudia Becker
+    "marketing_manager": "21m00Tcm4TlvDq8ikWAM",   # "Rachel" — Julia Weber
+    "risk_analyst": "pNInz6obpgDQGcFmaJgB",        # "Adam" — Mehmet Yilmaz
+    "ux_designer": "TxGEqnHWrfWFTfGW9XjX",         # "Josh" — Lukas Hoffmann
 }
 
 
@@ -107,7 +133,11 @@ def build_tts() -> TTSClient:
 
 
 def build_stt() -> STTClient:
-    key = os.getenv("GEMINI_API_KEY")
-    if key:
-        return GeminiSTT(key)
+    # ElevenLabs STT first (same key as TTS), then Gemini fallback
+    el_key = os.getenv("ELEVENLABS_API_KEY")
+    if el_key and el_key != "your-elevenlabs-key-here":
+        return ElevenLabsSTT(el_key)
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if gemini_key:
+        return GeminiSTT(gemini_key)
     return StubSTT()

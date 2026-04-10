@@ -17,7 +17,10 @@ from bridge.workflow import compile_workflow, init_services
 
 # ── Initialize ───────────────────────────────────────────────────────────
 
-st.set_page_config(page_title="The Bridge — Chat", page_icon="\U0001f309", layout="wide")
+st.set_page_config(page_title="FI.collab — Chat", page_icon="\U0001f91d", layout="wide")
+
+from bridge.styles import inject_shared_css
+inject_shared_css()
 
 if "store" not in st.session_state:
     st.session_state.store = ProjectStateStore()
@@ -40,11 +43,21 @@ if "active_ticket_key" not in st.session_state:
 if "last_audio" not in st.session_state:
     st.session_state.last_audio = None
 
-init_services(
-    llm=st.session_state.llm,
-    store=st.session_state.store,
-    jira=st.session_state.jira,
-)
+if "services_ready" not in st.session_state:
+    with st.spinner("Loading chat module — preparing knowledge base..."):
+        init_services(
+            llm=st.session_state.llm,
+            store=st.session_state.store,
+            jira=st.session_state.jira,
+        )
+        st.session_state.services_ready = True
+else:
+    init_services(
+        llm=st.session_state.llm,
+        store=st.session_state.store,
+        jira=st.session_state.jira,
+    )
+
 workflow = compile_workflow()
 
 # Ensure tickets are seeded from data sources
@@ -78,40 +91,77 @@ def _history_to_messages(convos):
     return msgs
 
 
+_AVATAR_ASSISTANT = "personas_pictures/Sparkasse_avatar.svg"
+
+
+def _get_user_avatar():
+    """Return persona picture if available, else flipped Sparkasse logo."""
+    from bridge.personas import PERSONAS
+    role_label = st.session_state.get("current_role", "")
+    for r, p in PERSONAS.items():
+        if p.display_name == role_label and p.picture:
+            return p.picture
+    return "personas_pictures/Sparkasse_flipped.svg"
+
+
 def _run_turn(prompt_text: str):
     """Execute a conversation turn and update session state."""
     st.session_state.pending_resume = False
     st.session_state.messages.append({"kind": "user", "content": prompt_text})
 
-    with st.spinner("The Bridge is thinking..."):
-        result = workflow.invoke({
-            "user_message": prompt_text,
-            "role": role.value,
-            "scenario_id": DEFAULT_SCENARIO,
-        })
+    # Show the user message immediately
+    with st.chat_message("user", avatar=_get_user_avatar()):
+        st.markdown(prompt_text)
 
+    import random
+    import time
+
+    _verbs = [
+        "thinking", "pondering", "contemplating", "rummaging",
+        "investigating", "deliberating", "analyzing", "scrutinizing",
+        "deciphering", "connecting", "correlating", "untangling",
+        "assembling", "cross-checking", "synthesizing",
+    ]
+
+    # Step 1: Get LLM response
+    with st.chat_message("assistant", avatar=_AVATAR_ASSISTANT):
+        with st.spinner(f"FI.collab is {random.choice(_verbs)}..."):
+            result = workflow.invoke({
+                "user_message": prompt_text,
+                "role": role.value,
+                "scenario_id": DEFAULT_SCENARIO,
+            })
     response = result.get("final_response", result.get("raw_response", ""))
-    st.session_state.messages.append({"kind": "assistant", "content": response})
     st.session_state.last_result = result
 
-    # Generate TTS audio if voice mode is on
-    if st.session_state.get("voice_enabled", False) and response:
+    # Auto-select newly created ticket in sidebar
+    if result.get("jira_action") == "create":
+        try:
+            jp = json.loads(result.get("jira_payload", "{}"))
+            if jp.get("key"):
+                st.session_state.active_ticket_key = jp["key"]
+        except json.JSONDecodeError:
+            pass
+
+    # Step 2: If voice on, generate audio and defer both text + audio to next render
+    if voice_responses and response:
         persona = get_persona(role)
         voice_id = persona.voice_id or get_voice_id(role.value)
-        with st.spinner("Generating voice..."):
-            audio_bytes = st.session_state.tts.synthesize(response, voice_id)
+        audio_bytes = st.session_state.tts.synthesize(response, voice_id)
         if audio_bytes:
-            st.session_state.last_audio = audio_bytes
-        else:
-            st.session_state.last_audio = None
-    else:
-        st.session_state.last_audio = None
+            st.session_state.pending_audio = audio_bytes
+            st.session_state.pending_audio_text = response
+            # Don't add to messages yet — will be added after audio playback
+            return
+
+    # Step 3: Voice off — add message and typewriter
+    st.session_state.messages.append({"kind": "assistant", "content": response})
+    st.session_state.pending_audio = None
+    st.session_state.pending_audio_text = None
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────
 
-st.sidebar.title("\U0001f309 The Bridge")
-st.sidebar.markdown("---")
 
 # Role selector — pick up landing page selection if available
 from bridge.personas import PERSONAS
@@ -127,19 +177,19 @@ role_label = st.sidebar.selectbox(
     "Select Role (Mock SSO)",
     _role_names,
     index=_default_idx,
-    help="Simulates single sign-on. The Bridge adapts its responses to your role.",
+    help="Simulates single sign-on. FI.collab adapts its responses to your role.",
 )
 role = _role_options[role_label]
 
-# Voice mode toggle
-voice_enabled = st.sidebar.toggle(
-    "Voice mode",
-    value=st.session_state.get("voice_enabled", False),
-    help="Enable mic input and spoken responses",
+# Voice response toggle
+voice_responses = st.sidebar.toggle(
+    "Spoken responses",
+    value=st.session_state.get("voice_responses", False),
+    help="Read responses aloud using ElevenLabs",
 )
-st.session_state.voice_enabled = voice_enabled
+st.session_state.voice_responses = voice_responses
 
-# Handle role switch
+# Handle role switch — new persona = new user logging in
 if "current_role" not in st.session_state:
     st.session_state.current_role = role_label
 if st.session_state.current_role != role_label:
@@ -147,15 +197,8 @@ if st.session_state.current_role != role_label:
     st.session_state.last_result = None
     st.session_state.active_ticket_key = None
     st.session_state.last_audio = None
-
-    recent = _get_recent_history(role)
-    if recent:
-        st.session_state.messages = _history_to_messages(recent)
-        st.session_state.pending_resume = False
-    else:
-        all_convos = st.session_state.store.get_conversations(role)
-        st.session_state.messages = []
-        st.session_state.pending_resume = bool(all_convos)
+    st.session_state.messages = []
+    st.session_state.pending_resume = False
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -185,7 +228,23 @@ if tickets:
                     type="primary" if is_selected else "secondary",
                     use_container_width=True,
                 ):
-                    st.session_state.active_ticket_key = ticket.key
+                    if is_selected:
+                        # Deselect — clear ticket and chat
+                        st.session_state.active_ticket_key = None
+                        st.session_state.messages = []
+                    else:
+                        # Select — show ticket summary in chat
+                        st.session_state.active_ticket_key = ticket.key
+                        st.session_state.messages = [{
+                            "kind": "assistant",
+                            "content": (
+                                f"**{ticket.key}**: {ticket.title}\n\n"
+                                f"- **Status:** {ticket.status}\n"
+                                f"- **Priority:** {ticket.priority}\n"
+                                f"- **Assignee:** {ticket.assignee or 'Unassigned'}"
+                            ),
+                        }]
+                    st.session_state.pending_resume = False
                     st.rerun()
 
     if resolved:
@@ -236,7 +295,7 @@ if st.session_state.last_result:
 
 # ── Main Chat Area ───────────────────────────────────────────────────────
 
-st.title("\U0001f4ac Chat")
+st.markdown('<div style="color: #e30613; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">Chat</div>', unsafe_allow_html=True)
 
 # Show active context
 active_key = st.session_state.active_ticket_key
@@ -252,51 +311,89 @@ if active_key:
 else:
     st.caption(f"Role: **{role_label}**")
 
-# Resume prompt for older sessions
-if st.session_state.pending_resume:
-    st.info("You have a previous conversation on file. Would you like to resume?")
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Resume previous session", type="primary"):
-            all_convos = st.session_state.store.get_conversations(role)
-            st.session_state.messages = _history_to_messages(all_convos[-10:])
-            st.session_state.pending_resume = False
+# Show/hide history button — context-sensitive to active ticket
+_all_convos = st.session_state.store.get_conversations(role)
+_active_key = st.session_state.active_ticket_key
+if _active_key:
+    # Filter to conversations that mention this ticket
+    _relevant = [c for c in _all_convos if _active_key in c.user_message or _active_key in c.assistant_response]
+else:
+    _relevant = _all_convos
+
+if _relevant:
+    if not st.session_state.messages:
+        if st.button("Show conversation history"):
+            st.session_state.messages = _history_to_messages(_relevant[-10:])
+            st.session_state["showing_history"] = True
             st.rerun()
-    with col2:
-        if st.button("Start fresh"):
-            st.session_state.pending_resume = False
+    elif st.session_state.get("showing_history"):
+        if st.button("Hide history"):
+            st.session_state.messages = []
+            st.session_state["showing_history"] = False
             st.rerun()
 
 # Render message history
 for msg in st.session_state.messages:
-    with st.chat_message(msg["kind"]):
+    _avatar = _get_user_avatar() if msg["kind"] == "user" else _AVATAR_ASSISTANT
+    with st.chat_message(msg["kind"], avatar=_avatar):
         st.markdown(msg["content"])
 
-# Play last audio response if available
-if st.session_state.last_audio:
-    st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
-    st.session_state.last_audio = None
+
+# Audio-first playback: play audio, then typewriter the text
+_is_playing_audio = bool(st.session_state.get("pending_audio"))
+if _is_playing_audio:
+    import time as _time
+
+    pending_text = st.session_state.get("pending_audio_text", "")
+
+    # Play audio outside the chat bubble so DOM updates don't interrupt it
+    st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
+
+    if pending_text:
+        with st.chat_message("assistant", avatar=_AVATAR_ASSISTANT):
+            def _stream_with_audio(text):
+                for word in text.split(" "):
+                    yield word + " "
+                    _time.sleep(0.06)
+            st.write_stream(_stream_with_audio(pending_text))
+        st.session_state.messages.append({"kind": "assistant", "content": pending_text})
+
+    st.session_state.pending_audio = None
+    st.session_state.pending_audio_text = None
 
 # ── Input area ───────────────────────────────────────────────────────────
 
-# Voice input (mic) — shown when voice mode is on
-if voice_enabled:
-    audio_data = st.audio_input(
-        "Record your question",
-        key="voice_input",
+from streamlit_mic_recorder import mic_recorder
+
+col_mic, col_chat = st.columns([1, 20])
+with col_mic:
+    audio = mic_recorder(
+        start_prompt="\U0001f3a4",
+        stop_prompt="\u23f9",
+        key="mic_recorder",
+        format="webm",
     )
-    if audio_data:
-        audio_bytes = audio_data.read()
+with col_chat:
+    prompt = st.chat_input("Ask about alignment, discrepancies, tickets, or request a report...")
+
+# Handle mic recording — track audio ID to avoid reprocessing on rerun
+if audio and audio.get("bytes"):
+    audio_id = audio.get("id", 0)
+    last_id = st.session_state.get("_last_audio_id", 0)
+    if audio_id != last_id:
+        st.session_state["_last_audio_id"] = audio_id
         with st.spinner("Transcribing..."):
-            transcription = st.session_state.stt.transcribe(audio_bytes)
+            transcription = st.session_state.stt.transcribe(
+                audio["bytes"],
+                mime_type="audio/webm",
+            )
         if transcription and not transcription.startswith("("):
             _run_turn(transcription)
             st.rerun()
-        else:
+        elif transcription:
             st.warning("Could not transcribe audio. Please try again or type your question.")
 
-# Text input — always available
-prompt = st.chat_input("Ask about alignment, discrepancies, tickets, or request a report...")
+# Handle text input
 if prompt:
     _run_turn(prompt)
     st.rerun()

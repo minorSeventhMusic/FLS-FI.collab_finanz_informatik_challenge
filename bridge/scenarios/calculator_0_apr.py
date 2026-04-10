@@ -350,6 +350,36 @@ PERSONA_CONFLICTS = """\
 
 # === Persona Detail Files (from origin/business personas/) ===
 
+PERSONA_BUSINESS_ANALYST = """\
+Name: Tobias Klein | Age: 37 | Location: Frankfurt am Main
+Role: Senior Business Analyst – Digital Banking Transformation
+
+Background: Degree in Business Information Systems. 12 years in banking and financial IT.
+Responsibilities: Translates business requirements into technical specifications. Works between \
+business stakeholders and development teams. Defines user stories and functional requirements.
+Goals: Align IT solutions with business objectives. Improve efficiency of banking processes. \
+Enable successful delivery of digital transformation projects.
+Pain Points: Misalignment between technical and business teams. Constantly changing stakeholder \
+requirements. Complex banking processes and legacy systems.
+Tools: Jira/Confluence, BPMN modeling tools, Excel/data analysis, requirement management systems.
+Mindset: "The best IT solutions come from understanding both technology and business."
+"""
+
+PERSONA_SOFTWARE_DEVELOPER = """\
+Name: Anna Fischer | Age: 32 | Location: Berlin
+Role: Senior Software Developer – Digital Banking Platform
+
+Background: MSc in Computer Science. 8 years in backend development. Fintech startup experience.
+Responsibilities: Develops and maintains backend services for mobile and online banking. \
+Implements APIs and integrates with core banking platforms. Ensures code quality and security.
+Goals: Build reliable and scalable banking software. Reduce technical debt. Implement modern \
+development practices (CI/CD, microservices).
+Pain Points: Complex legacy banking infrastructure. Long release cycles due to compliance. \
+Balancing technical quality with delivery deadlines.
+Tools: Java/Kotlin/Spring Boot, Git/GitHub, Docker/Kubernetes, Jira/Confluence, CI/CD pipelines.
+Mindset: "Clean architecture and automation make banking systems sustainable."
+"""
+
 PERSONA_PRODUCT_MANAGER = """\
 Name: Daniel Schneider | Age: 41 | Location: Frankfurt am Main
 Role: Senior Product Manager – Digital Banking Platform
@@ -456,8 +486,9 @@ JIRA_104 = JiraTicketData(
     status="To Do",
     priority="High",
     description=MOCKUP_JIRA_MD,
+    assignee="Daniel Schneider",
     external_url="https://jira.example.com/browse/JIRA-104",
-    history=["Created by AI Collaborator during initial review"],
+    history=["Created by AI Collaborator during initial review", "Assigned to Daniel Schneider (Product Manager)"],
 )
 
 CALCULATOR_0_APR_SCENARIO = ScenarioBundle(
@@ -480,6 +511,8 @@ CALCULATOR_0_APR_SCENARIO = ScenarioBundle(
     stakeholder_comms=STAKEHOLDER_EMAIL,
     persona_conflicts=PERSONA_CONFLICTS,
     persona_details={
+        "business_analyst": PERSONA_BUSINESS_ANALYST,
+        "developer": PERSONA_SOFTWARE_DEVELOPER,
         "product_manager": PERSONA_PRODUCT_MANAGER,
         "compliance_officer": PERSONA_COMPLIANCE_OFFICER,
         "marketing_manager": PERSONA_MARKETING_MANAGER,

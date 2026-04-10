@@ -5,6 +5,10 @@ import os
 from dataclasses import dataclass
 from typing import Protocol
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class LLMClient(Protocol):
     def generate(self, system_prompt: str, user_prompt: str) -> str:
@@ -154,7 +158,7 @@ class StubLLMClient:
             if "create" in lowered:
                 return (
                     "I've created a follow-up ticket for this issue.\n\n"
-                    "**BRIDGE-201**: \"Bridge follow-up: alignment gap detected\"\n"
+                    "**JIRA-201**: \"Follow-up: alignment gap detected\"\n"
                     "- Priority: High\n"
                     "- Status: To Do\n\n"
                     "This is in addition to the existing **JIRA-104** which tracks the 0% interest rate fix."
@@ -255,24 +259,19 @@ class GeminiClient:
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         from google.genai import types
 
-        # Use higher token limit for alignment JSON, lower for chat responses
-        is_alignment = "alignment analyst" in system_prompt.lower()
-        max_tokens = 2000 if is_alignment else 400
-
         try:
             response = self._client.models.generate_content(
                 model=self._model,
                 contents=user_prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
-                    max_output_tokens=max_tokens,
                     temperature=0.3,
                 ),
             )
             return response.text
         except Exception as e:
             import streamlit as st
-            st.warning(f"Gemini API error: {e.__class__.__name__}. Using offline mode.")
+            st.error(f"Gemini API error: {e.__class__.__name__}: {str(e)[:120]}. Falling back to offline mode.")
             return self._fallback.generate(system_prompt, user_prompt)
 
 

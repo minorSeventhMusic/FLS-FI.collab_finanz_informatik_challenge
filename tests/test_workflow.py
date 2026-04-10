@@ -72,7 +72,7 @@ class TestWorkflow(unittest.TestCase):
         })
         self.assertEqual(result["intent"], "create_ticket")
         self.assertEqual(result["jira_action"], "create")
-        self.assertIn("BRIDGE-", result["final_response"])
+        self.assertIn("JIRA-", result["final_response"])
 
     def test_alignment_score_present(self):
         wf, _ = _setup()

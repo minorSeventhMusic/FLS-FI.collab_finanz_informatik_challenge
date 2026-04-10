@@ -13,7 +13,10 @@ from bridge.models import Intent, Role
 from bridge.persistence import ProjectStateStore
 from bridge.scenarios import get_scenario
 
-st.set_page_config(page_title="The Bridge — Dashboard", page_icon="\U0001f309", layout="wide")
+st.set_page_config(page_title="FI.collab — Dashboard", page_icon="\U0001f91d", layout="wide")
+
+from bridge.styles import inject_shared_css
+inject_shared_css()
 
 # ── Initialize ───────────────────────────────────────────────────────────
 
@@ -25,7 +28,7 @@ if "llm" not in st.session_state:
 store = st.session_state.store
 llm = st.session_state.llm
 
-st.title("\U0001f4ca Dashboard")
+st.markdown('<div style="color: #e30613; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">Dashboard</div>', unsafe_allow_html=True)
 st.caption("Real-time alignment overview")
 st.markdown("---")
 

@@ -7,7 +7,7 @@ from langgraph.graph import END, START, StateGraph
 
 from bridge.alignment import analyze_alignment
 from bridge.config import DEFAULT_SCENARIO
-from bridge.context import assemble
+from bridge.context import assemble, assemble_rag
 from bridge.jira import JiraAdapter
 from bridge.llm import LLMClient, build_llm_client
 from bridge.models import (
@@ -20,7 +20,6 @@ from bridge.models import (
 from bridge.personas import get_persona
 from bridge.persistence import ProjectStateStore
 from bridge.prompts.system import (
-    CONCIERGE_GATE_PROMPT,
     HANDOFF_RESPONSE_PROMPT,
     INTENT_CLASSIFICATION_PROMPT,
     RESPONSE_SYSTEM_PROMPT,
@@ -32,6 +31,7 @@ from bridge.scenarios import get_scenario
 _llm: LLMClient = None  # type: ignore[assignment]
 _store: ProjectStateStore = None  # type: ignore[assignment]
 _jira: JiraAdapter = None  # type: ignore[assignment]
+_vector_store = None  # type: ignore[assignment]
 
 
 def init_services(
@@ -39,10 +39,32 @@ def init_services(
     store: ProjectStateStore = None,
     jira: JiraAdapter = None,
 ) -> None:
-    global _llm, _store, _jira
+    global _llm, _store, _jira, _vector_store
     _llm = llm or build_llm_client()
     _store = store or ProjectStateStore()
     _jira = jira or JiraAdapter(_store)
+
+    # Initialize vector store and pre-compute alignment once
+    if _vector_store is None:
+        try:
+            from bridge.rag import VectorStore, build_chunks_from_scenario
+            scenario = get_scenario(DEFAULT_SCENARIO)
+            _vector_store = VectorStore()
+            chunks = build_chunks_from_scenario(scenario)
+            _vector_store.add_chunks(chunks)
+        except Exception:
+            _vector_store = None
+
+    global _cached_alignment
+    if _cached_alignment is None:
+        try:
+            from bridge.context import assemble as _full_assemble
+            from bridge.models import Intent as _Intent, Role as _Role
+            _scenario = get_scenario(DEFAULT_SCENARIO)
+            _ctx = _full_assemble(_Role.DEVELOPER, _Intent.ALIGNMENT_REPORT, _scenario, "", [])
+            _cached_alignment = analyze_alignment(_ctx.context_string, _llm)
+        except Exception:
+            pass
 
 
 def _ensure_services() -> None:
@@ -53,19 +75,99 @@ def _ensure_services() -> None:
 # ── Node Functions ───────────────────────────────────────────────────────
 
 
+import re as _re
+
+
+def _extract_ticket_fields(response: str) -> tuple:
+    """Extract title, priority, and assignee from an LLM-generated ticket response."""
+    lines = response.strip().split("\n")
+
+    title = ""
+    priority = "Medium"
+    assignee = ""
+
+    for line in lines:
+        stripped = line.strip().lstrip("-•").strip()
+        lowered = stripped.lower()
+
+        # Extract Summary/Title from labeled field
+        if not title:
+            for prefix in ("summary:", "title:", "subject:"):
+                if lowered.startswith(prefix):
+                    title = stripped[len(prefix):].strip().strip("*").strip()
+                    break
+
+        # Extract from "JIRA-NNN: Title" format (LLM hallucinated ticket ID)
+        if not title and _re.match(r"^(JIRA|BRIDGE)-\d+[:\s]", stripped):
+            title = _re.sub(r"^(JIRA|BRIDGE)-\d+[:\s]+", "", stripped).strip().strip("*")
+
+        # Extract Priority
+        if lowered.startswith("priority:"):
+            val = stripped[9:].strip().strip("*").strip()
+            if val:
+                priority = val
+
+        # Extract Assignee
+        if lowered.startswith("assignee:"):
+            val = stripped[9:].strip().strip("*").strip()
+            if val:
+                assignee = val
+
+    # Clean title
+    title = title.replace("**", "").replace("*", "")
+    # Skip lines that are just headers like "JIRA Ticket Created:"
+    if title.lower() in ("jira ticket created", "ticket created", "created", ""):
+        title = ""
+    if len(title) > 120:
+        title = title[:117] + "..."
+
+    return title, priority, assignee
+
+
+def _rule_based_intent(message: str) -> Intent:
+    """Fast keyword-based intent classification — no LLM needed."""
+    lowered = message.lower()
+    # Check TICKET_STATUS first — "show open tickets" should not trigger create
+    if any(w in lowered for w in (
+        "ticket status", "status of", "jira status", "what tickets",
+        "open tickets", "show ticket", "my tickets", "pending ticket",
+        "list ticket", "show me", "which ticket", "assigned to",
+    )):
+        return Intent.TICKET_STATUS
+    # CREATE_TICKET — explicit creation intent only
+    if "create" in lowered and "ticket" in lowered:
+        return Intent.CREATE_TICKET
+    if any(w in lowered for w in ("raise a ticket", "make a ticket", "open a new ticket", "file a ticket")):
+        return Intent.CREATE_TICKET
+    if any(w in lowered for w in ("update ticket", "change status", "move ticket")):
+        return Intent.UPDATE_TICKET
+    if any(w in lowered for w in ("mismatch", "discrepancy", "drift", "not matching", "contradiction", "conflict")):
+        return Intent.DISCREPANCY_CHECK
+    if any(w in lowered for w in ("report", "summary", "alignment overview", "overall")):
+        return Intent.ALIGNMENT_REPORT
+    if any(w in lowered for w in ("code", "function", "implementation", "calculate", "validation", "test")):
+        return Intent.CODE_QUESTION
+    if any(w in lowered for w in ("business", "requirement", "stakeholder", "customer", "compliance")):
+        return Intent.BUSINESS_QUESTION
+    return Intent.GENERAL
+
+
 def classify_intent(state: BridgeState) -> Dict[str, Any]:
     _ensure_services()
-    prompt = INTENT_CLASSIFICATION_PROMPT.format(
-        role=state["role"],
-        user_message=state["user_message"],
-    )
-    raw = _llm.generate(prompt, state["user_message"])
-    raw_clean = raw.strip().lower().replace(" ", "_")
+    intent = _rule_based_intent(state["user_message"])
 
-    try:
-        intent = Intent(raw_clean)
-    except ValueError:
-        intent = Intent.GENERAL
+    # Only use LLM for ambiguous cases (GENERAL) where keywords didn't match
+    if intent == Intent.GENERAL:
+        prompt = INTENT_CLASSIFICATION_PROMPT.format(
+            role=state["role"],
+            user_message=state["user_message"],
+        )
+        raw = _llm.generate(prompt, state["user_message"])
+        raw_clean = raw.strip().lower().replace(" ", "_")
+        try:
+            intent = Intent(raw_clean)
+        except ValueError:
+            pass  # keep GENERAL
 
     return {"intent": intent.value}
 
@@ -77,13 +179,18 @@ def assemble_context(state: BridgeState) -> Dict[str, Any]:
     scenario_id = state.get("scenario_id", DEFAULT_SCENARIO)
     scenario = get_scenario(scenario_id)
 
-    # Seed Jira tickets
+    # Seed Jira tickets and get all live tickets
     _jira.ensure_seed_tickets(scenario)
+    live_tickets = _jira.list_tickets()
 
     # Load conversation history
     history = _store.get_conversations(role)
 
-    result = assemble(role, intent, scenario, state["user_message"], history)
+    # Use RAG if vector store is available, else fall back to full context
+    if _vector_store is not None and _vector_store.size > 0:
+        result = assemble_rag(role, state["user_message"], history, _vector_store, live_tickets)
+    else:
+        result = assemble(role, intent, scenario, state["user_message"], history, live_tickets)
 
     return {
         "assembled_context": result.context_string,
@@ -92,22 +199,23 @@ def assemble_context(state: BridgeState) -> Dict[str, Any]:
     }
 
 
-def concierge_gate(state: BridgeState) -> Dict[str, Any]:
-    _ensure_services()
-    prompt = CONCIERGE_GATE_PROMPT.format(
-        role=state["role"],
-        user_message=state["user_message"],
-        intent=state["intent"],
-    )
-    raw = _llm.generate(prompt, state["user_message"])
+_CODE_REQUEST_KEYWORDS = ("raw code", "full code", "source code", "stack trace", "show me the code", "see the code")
 
-    try:
-        data = json.loads(raw.strip())
-        restricted = bool(data.get("restricted", False))
-        reason = data.get("reason", "")
-    except (json.JSONDecodeError, AttributeError):
-        restricted = False
-        reason = ""
+
+def concierge_gate(state: BridgeState) -> Dict[str, Any]:
+    """Rule-based access control — no LLM needed."""
+    _ensure_services()
+    role = Role(state["role"])
+    persona = get_persona(role)
+    lowered = state["user_message"].lower()
+
+    restricted = False
+    reason = ""
+
+    if "raw_code" in persona.hidden_doc_types:
+        if any(kw in lowered for kw in _CODE_REQUEST_KEYWORDS):
+            restricted = True
+            reason = f"{persona.display_name} receives translated summaries instead of raw source code."
 
     return {"restricted": restricted, "handoff_reason": reason}
 
@@ -163,9 +271,20 @@ def generate_handoff_response(state: BridgeState) -> Dict[str, Any]:
     }
 
 
+_cached_alignment = None  # type: ignore[assignment]
+
+
 def run_alignment(state: BridgeState) -> Dict[str, Any]:
     _ensure_services()
-    result = analyze_alignment(state["assembled_context"], _llm)
+    global _cached_alignment
+
+    # Reuse cached alignment unless user explicitly asks for analysis
+    intent = state.get("intent", "")
+    if _cached_alignment is not None and intent not in ("alignment_report", "discrepancy_check"):
+        result = _cached_alignment
+    else:
+        result = analyze_alignment(state["assembled_context"], _llm)
+        _cached_alignment = result
 
     return {
         "alignment_discrepancies": json.dumps([
@@ -194,17 +313,19 @@ def handle_side_effects(state: BridgeState) -> Dict[str, Any]:
     jira_payload = "{}"
     scenario_id = state.get("scenario_id", DEFAULT_SCENARIO)
 
-    # Create ticket if requested
+    # Create ticket if requested — parse LLM response for ticket fields
     if intent == Intent.CREATE_TICKET:
+        title, priority, assignee = _extract_ticket_fields(response)
+        if not title:
+            title = "Follow-up: " + state["user_message"][:80]
+
+        persona = get_persona(role)
         ticket = _jira.create_ticket(
-            title="Bridge follow-up: alignment gap detected",
-            description=(
-                "Automated ticket created by The Bridge.\n\n"
-                f"User ({state['role']}): {state['user_message']}\n\n"
-                f"Alignment score: {state.get('alignment_score', 'N/A')}%\n"
-                f"Summary: {state.get('alignment_summary', 'N/A')}"
-            ),
-            priority="High",
+            title=title,
+            description=response,
+            priority=priority,
+            assignee=assignee,
+            reporter=persona.display_name,
         )
         jira_action = "create"
         jira_payload = json.dumps({"key": ticket.key, "title": ticket.title})

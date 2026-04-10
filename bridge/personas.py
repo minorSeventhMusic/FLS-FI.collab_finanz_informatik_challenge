@@ -14,6 +14,7 @@ class PersonaConfig:
     hidden_doc_types: List[str]
     tone: str
     voice_id: str = ""
+    picture: str = ""
 
 
 # Shared doc type lists to reduce repetition
@@ -38,14 +39,16 @@ _TECHNICAL_VISIBLE = [
 
 PERSONAS: Dict[Role, PersonaConfig] = {
     Role.BUSINESS_ANALYST: PersonaConfig(
-        display_name="Business Analyst",
+        display_name="Tobias Klein (Business Analyst)",
         system_instructions=(
-            "You are speaking to a Business Analyst. Follow these rules strictly:\n"
-            "- Translate all technical concepts into business impact and customer outcomes\n"
+            "You are speaking to Tobias Klein, Senior Business Analyst.\n"
+            "Tobias (37, Frankfurt) has 12 years in banking and financial IT.\n"
+            "He thinks: 'The best IT solutions come from understanding both technology and business.'\n\n"
+            "Follow these rules:\n"
+            "- Translate technical concepts into business impact and customer outcomes\n"
             "- NEVER show raw source code, function signatures, or stack traces\n"
-            "- Describe what the system does in plain English\n"
             "- Reference business requirements, KPIs, compliance needs, and stakeholder commitments\n"
-            "- Frame discrepancies as business risks and customer impact\n"
+            "- Frame discrepancies as business risks and process gaps\n"
             "- Suggest business-appropriate actions: create tickets, escalate, schedule reviews\n"
             "- Use professional, non-technical language throughout"
         ),
@@ -53,11 +56,15 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         hidden_doc_types=["raw_code", "test_files"],
         tone="professional, non-technical, business-outcome focused",
         voice_id="EXAVITQu4vr4xnSDxMaL",  # "Sarah"
+        picture="personas_pictures/business_analyst.png",
     ),
     Role.DEVELOPER: PersonaConfig(
-        display_name="Developer",
+        display_name="Anna Fischer (Developer)",
         system_instructions=(
-            "You are speaking to a Developer. Follow these rules strictly:\n"
+            "You are speaking to Anna Fischer, Senior Software Developer.\n"
+            "Anna (32, Berlin) has an MSc in Computer Science and 8 years in backend dev.\n"
+            "She thinks: 'Clean architecture and automation make banking systems sustainable.'\n\n"
+            "Follow these rules:\n"
             "- Include file paths, function names, line references, and code snippets\n"
             "- Reference specific validation logic, formulae, and implementation details\n"
             "- Identify test coverage gaps and suggest specific test cases\n"
@@ -70,6 +77,7 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         hidden_doc_types=["pricing_strategy", "customer_pii"],
         tone="technical, precise, actionable",
         voice_id="JBFqnCBsd6RMkjVDRZzb",  # "George"
+        picture="personas_pictures/software_developer.jpg",
     ),
     Role.PRODUCT_MANAGER: PersonaConfig(
         display_name="Daniel Schneider (Product Manager)",
@@ -89,6 +97,7 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         hidden_doc_types=["raw_code", "test_files"],
         tone="strategic, product-focused, data-driven",
         voice_id="TX3LPaxmHKxFdv7VOQHJ",  # "Liam"
+        picture="personas_pictures/product_manager.webp",
     ),
     Role.COMPLIANCE_OFFICER: PersonaConfig(
         display_name="Claudia Becker (Compliance Officer)",
@@ -108,6 +117,7 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         hidden_doc_types=["raw_code", "test_files"],
         tone="formal, risk-aware, regulation-focused",
         voice_id="XB0fDUnXU5powFXDhCwa",  # "Charlotte"
+        picture="personas_pictures/compliance_officer.webp",
     ),
     Role.MARKETING_MANAGER: PersonaConfig(
         display_name="Julia Weber (Marketing Manager)",
@@ -126,7 +136,8 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         visible_doc_types=_BUSINESS_VISIBLE,
         hidden_doc_types=["raw_code", "test_files", "technical_documentation"],
         tone="customer-focused, brand-aware, campaign-oriented",
-        voice_id="EXAVITQu4vr4xnSDxMaL",  # "Sarah"
+        voice_id="21m00Tcm4TlvDq8ikWAM",  # "Rachel"
+        picture="personas_pictures/marketing_manager.png",
     ),
     Role.RISK_ANALYST: PersonaConfig(
         display_name="Mehmet Yilmaz (Risk Analyst)",
@@ -145,7 +156,8 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         visible_doc_types=_BUSINESS_VISIBLE + ["technical_documentation"],
         hidden_doc_types=["raw_code", "test_files"],
         tone="analytical, risk-focused, methodical",
-        voice_id="JBFqnCBsd6RMkjVDRZzb",  # "George"
+        voice_id="pNInz6obpgDQGcFmaJgB",  # "Adam"
+        picture="personas_pictures/risk_analyst.webp",
     ),
     Role.UX_DESIGNER: PersonaConfig(
         display_name="Lukas Hoffmann (UX Designer)",
@@ -164,7 +176,8 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         visible_doc_types=_BUSINESS_VISIBLE,
         hidden_doc_types=["raw_code", "test_files"],
         tone="user-centered, empathetic, design-focused",
-        voice_id="TX3LPaxmHKxFdv7VOQHJ",  # "Liam"
+        voice_id="TxGEqnHWrfWFTfGW9XjX",  # "Josh"
+        picture="personas_pictures/ux_designer.webp",
     ),
 }
 
