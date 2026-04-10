@@ -1,6 +1,6 @@
 import importlib
+import ast
 import os
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -26,6 +26,7 @@ def _write_ticket_markdown(ticket_text, error_text):
     """Write one Jira ticket, capping total files at 3 by overwriting the oldest."""
     now = _now_in_app_timezone()
     generated_at = now.strftime("%Y-%m-%d-%H%M")
+    # Keep the filename suffix aligned with the generated timestamp for stable file matching.
     timestamp_for_name = generated_at
 
     base_dir = Path(__file__).parent
@@ -107,39 +108,55 @@ def _load_calculator_source():
 def _extract_validation_rules(source_text):
     """Extract ValueError validation rules from calculator source code."""
     rules = []
-    lines = source_text.splitlines()
-    i = 0
 
-    while i < len(lines):
-        line = lines[i]
-        stripped = line.lstrip()
-        indent = len(line) - len(stripped)
+    try:
+        tree = ast.parse(source_text)
+    except SyntaxError:
+        return rules
 
-        if stripped.startswith("if ") and stripped.endswith(":"):
-            condition = stripped[3:-1].strip()
-            message = None
-            i += 1
+    function_node = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "calculate_monthly_payment":
+            function_node = node
+            break
 
-            while i < len(lines):
-                block_line = lines[i]
-                block_stripped = block_line.lstrip()
-                block_indent = len(block_line) - len(block_stripped)
+    if function_node is None:
+        return rules
 
-                # End of this if-block.
-                if block_stripped and block_indent <= indent:
-                    break
-
-                match = re.search(r'error_message\s*=\s*"([^"]+)"', block_line)
-                if match:
-                    message = match.group(1).strip()
-
-                i += 1
-
-            if message:
-                rules.append({"condition": condition, "message": message})
+    for statement in function_node.body:
+        if not isinstance(statement, ast.If):
             continue
 
-        i += 1
+        message = None
+        for nested_statement in statement.body:
+            if isinstance(nested_statement, ast.Assign):
+                for target in nested_statement.targets:
+                    if isinstance(target, ast.Name) and target.id == "error_message":
+                        value = nested_statement.value
+                        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                            message = value.value.strip()
+                        break
+            elif isinstance(nested_statement, ast.Raise):
+                exc = nested_statement.exc
+                if isinstance(exc, ast.Call) and getattr(exc.func, "id", None) == "ValueError" and exc.args:
+                    first_arg = exc.args[0]
+                    if isinstance(first_arg, ast.Constant) and isinstance(first_arg.value, str):
+                        message = first_arg.value.strip()
+                        break
+            if message:
+                break
+
+        if not message:
+            continue
+
+        condition = ast.unparse(statement.test).strip()
+        rules.append(
+            {
+                "condition": condition,
+                "message": message,
+                "line": getattr(statement, "lineno", None),
+            }
+        )
 
     return rules
 
@@ -164,8 +181,9 @@ def _analyze_calculator_for_issue(source_text, error_text):
     findings.append(f"Found {len(rules)} ValueError validation rule(s) in source")
 
     if matched_rule:
+        line_info = f" on line {matched_rule['line']}" if matched_rule.get("line") else ""
         findings.append(
-            f"Matched validation rule: if {matched_rule['condition']} -> ValueError('{matched_rule['message']}')"
+            f"Matched validation rule{line_info}: if {matched_rule['condition']} -> ValueError('{matched_rule['message']}')"
         )
     else:
         findings.append("No exact validation rule matched the observed error message")
