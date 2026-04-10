@@ -332,6 +332,29 @@ Mobile Responsiveness: 70% of traffic is expected from mobile devices.
 Conversion Rate: % of users who click "Apply Now" after calculating.
 Drop-off Point: At which field do users leave the page?
 Calculation Accuracy: 0% variance between the calculator estimate and the final loan contract.
+
+8. Feature Roadmap — Version 2.0 Requirements
+The calculator must be extended with a Loan Term Calculation feature:
+- V1.0 (current): Input (Loan Amount, Interest Rate, Loan Duration) → Output (Monthly Payment)
+- V2.0 (required): Input (Loan Amount, Interest Rate, Monthly Payment) → Output (Loan Duration)
+
+The V2.0 feature allows customers to answer: "If I can afford €X per month, how long will it \
+take to pay off my loan?" This is a critical conversion feature — competitors already offer it.
+
+Implementation should use the inverse amortization formula:
+n = -log(1 - (P * r) / M) / log(1 + r)
+where P = loan amount, M = monthly payment, r = monthly interest rate.
+
+The V2.0 feature must also handle 0% interest (simple division: loan_amount / monthly_payment).
+The CLI menu option [2] is already reserved for this feature ("Calculate loan term - not yet implemented").
+
+Acceptance Criteria:
+- User can select option [2] in the CLI to calculate loan term
+- Given loan amount, interest rate, and monthly payment, returns duration in months
+- Handles 0% interest correctly (simple division)
+- Validates that monthly payment exceeds minimum interest-only payment
+- Unit tests cover standard, edge, and 0% cases
+- Technical documentation updated
 """
 
 
@@ -530,5 +553,6 @@ CALCULATOR_0_APR_SCENARIO = ScenarioBundle(
         "Persona conflicts (PM vs Compliance vs Marketing vs Risk vs UX) unresolved in technical scope",
         "JIRA acceptance criteria reference 'Technical Constraints' section that doesn't exist in docs",
         "Sales team complaint confirms real users are blocked by the 0% issue — not just theoretical",
+        "V2.0 Loan Term Calculation is required by business but CLI menu option [2] says 'not yet implemented'",
     ],
 )

@@ -44,17 +44,20 @@ def init_services(
     _store = store or ProjectStateStore()
     _jira = jira or JiraAdapter(_store)
 
-    # Initialize vector store and pre-compute alignment once
+    # Initialize vector store — index all registered scenarios
     if _vector_store is None:
         try:
             from bridge.rag import VectorStore, build_chunks_from_scenario
-            scenario = get_scenario(DEFAULT_SCENARIO)
+            from bridge.scenarios import SCENARIOS
             _vector_store = VectorStore()
-            chunks = build_chunks_from_scenario(scenario)
-            _vector_store.add_chunks(chunks)
+            all_chunks = []
+            for sid, scenario in SCENARIOS.items():
+                all_chunks.extend(build_chunks_from_scenario(scenario))
+            _vector_store.add_chunks(all_chunks)
         except Exception:
             _vector_store = None
 
+    # Pre-compute alignment for the default scenario (bundled data only)
     global _cached_alignment
     if _cached_alignment is None:
         try:
@@ -139,12 +142,21 @@ def _rule_based_intent(message: str) -> Intent:
         return Intent.CREATE_TICKET
     if any(w in lowered for w in ("raise a ticket", "make a ticket", "open a new ticket", "file a ticket")):
         return Intent.CREATE_TICKET
-    if any(w in lowered for w in ("update ticket", "change status", "move ticket")):
+    if any(w in lowered for w in (
+        "update ticket", "change status", "move ticket",
+        "close ticket", "close jira", "mark as done", "mark done",
+        "mark jira", "resolve ticket", "resolve jira", "resolve this",
+        "set to done", "set to resolved", "set to in progress",
+        "ticket is done", "ticket is complete", "in progress",
+    )):
         return Intent.UPDATE_TICKET
     if any(w in lowered for w in ("mismatch", "discrepancy", "drift", "not matching", "contradiction", "conflict")):
         return Intent.DISCREPANCY_CHECK
     if any(w in lowered for w in ("report", "summary", "alignment overview", "overall")):
         return Intent.ALIGNMENT_REPORT
+    # GENERATE_TESTS — before CODE_QUESTION since "test" is in both
+    if any(w in lowered for w in ("generate test", "write test", "write unit", "create test", "test case", "test coverage", "add test")):
+        return Intent.GENERATE_TESTS
     if any(w in lowered for w in ("code", "function", "implementation", "calculate", "validation", "test")):
         return Intent.CODE_QUESTION
     if any(w in lowered for w in ("business", "requirement", "stakeholder", "customer", "compliance")):
@@ -330,6 +342,43 @@ def handle_side_effects(state: BridgeState) -> Dict[str, Any]:
         jira_action = "create"
         jira_payload = json.dumps({"key": ticket.key, "title": ticket.title})
         response += f"\n\nTicket **{ticket.key}** has been created: \"{ticket.title}\""
+
+    # Update ticket if requested
+    elif intent == Intent.UPDATE_TICKET:
+        lowered_msg = state["user_message"].lower()
+        # Determine new status from message
+        if any(w in lowered_msg for w in ("close", "done", "complete", "resolve")):
+            new_status = "Done"
+        elif "in progress" in lowered_msg:
+            new_status = "In Progress"
+        else:
+            new_status = "Done"
+
+        # Find ticket key in message, or use active ticket from sidebar
+        import re as _re_update
+        key_match = _re_update.search(r"(JIRA-\d+)", state["user_message"])
+        ticket_key = key_match.group(1) if key_match else None
+
+        # Fall back to most recent ticket in conversation or first open ticket
+        if not ticket_key:
+            all_tickets = _jira.list_tickets()
+            open_tickets = [t for t in all_tickets if t.status != "Done"]
+            if open_tickets:
+                ticket_key = open_tickets[0].key
+
+        if ticket_key:
+            try:
+                persona = get_persona(role)
+                updated = _jira.update_ticket(
+                    ticket_key,
+                    status=new_status,
+                    note=f"Updated to {new_status} by {persona.display_name}",
+                )
+                jira_action = "update"
+                jira_payload = json.dumps({"key": updated.key, "status": updated.status})
+                response += f"\n\n**{updated.key}** has been updated to **{updated.status}**."
+            except KeyError:
+                response += f"\n\nCould not find ticket {ticket_key}."
 
     # Persist conversation
     _store.append_conversation(ConversationEntry(

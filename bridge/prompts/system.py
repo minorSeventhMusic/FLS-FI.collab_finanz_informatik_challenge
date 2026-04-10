@@ -11,6 +11,7 @@ Categories:
 - code_question: user asks about code, functions, or technical behavior
 - business_question: user asks about business requirements, compliance, or stakeholder needs
 - alignment_report: user asks for a summary or overall assessment
+- generate_tests: user asks to generate, write, or create test cases or unit tests
 - general: anything else
 
 IMPORTANT: Asking about existing tickets (show, list, open, pending, assigned, my tickets) \
@@ -58,6 +59,9 @@ Guidelines:
   Description: <brief description>
 - Do NOT write "JIRA Ticket Created" or any ticket ID — the system adds that automatically
 - When a stakeholder communication contradicts code or Jira, flag it in one clear sentence
+- If asked to generate test cases, write complete runnable pytest code in a python code block. \
+Include imports, test function names starting with test_, assertions, and edge cases. \
+Make the tests self-contained and ready to copy into a test file.
 - Never repeat the user's question back. Never add preamble. Get straight to the answer."""
 
 CONCIERGE_GATE_PROMPT = """\

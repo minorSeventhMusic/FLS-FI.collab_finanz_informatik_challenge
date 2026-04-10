@@ -22,16 +22,76 @@ st.set_page_config(page_title="FI.collab — Chat", page_icon="\U0001f91d", layo
 from bridge.styles import inject_shared_css
 inject_shared_css()
 
-if "store" not in st.session_state:
-    st.session_state.store = ProjectStateStore()
-if "llm" not in st.session_state:
-    st.session_state.llm = build_llm_client()
-if "jira" not in st.session_state:
-    st.session_state.jira = JiraAdapter(st.session_state.store)
-if "tts" not in st.session_state:
-    st.session_state.tts = build_tts()
-if "stt" not in st.session_state:
-    st.session_state.stt = build_stt()
+# Determine active project early — needed for init check
+_active_project = st.session_state.get("active_project", DEFAULT_SCENARIO)
+_needs_init = "services_ready" not in st.session_state or st.session_state.get("_loaded_project") != _active_project
+
+# Show loading spinners FIRST, before any other UI renders
+if _needs_init:
+    _loading_placeholder = st.empty()
+
+    _is_github = st.session_state.get("github_repo") and _active_project.startswith("github_")
+
+    # Fetch GitHub files + hold spinner until user sees the toast
+    if _is_github:
+        import time as _init_time
+        with _loading_placeholder, st.spinner("Connecting to GitHub repository..."):
+            from bridge.github_client import fetch_repo_files, repo_files_to_dict, fetch_commits, commits_to_text
+            from bridge.scenarios import build_github_scenario
+            _owner, _repo = st.session_state["github_repo"]
+            _files = fetch_repo_files(_owner, _repo)
+            _commits = fetch_commits(_owner, _repo)
+            if _files:
+                _file_dict = repo_files_to_dict(_files)
+                _commit_text = commits_to_text(_commits) if _commits else ""
+                build_github_scenario(_file_dict, _owner, _repo, commit_history=_commit_text)
+            st.toast(f"Fetched {len(_files) if _files else 0} files and {len(_commits)} commits from GitHub", icon="\u2705")
+            _init_time.sleep(2)  # Hold so user sees the GitHub connection message
+
+    # Build knowledge base
+    with _loading_placeholder, st.spinner("Loading chat module — preparing knowledge base..."):
+        if "store" not in st.session_state:
+            st.session_state.store = ProjectStateStore()
+        if "llm" not in st.session_state:
+            st.session_state.llm = build_llm_client()
+        if "jira" not in st.session_state:
+            st.session_state.jira = JiraAdapter(st.session_state.store)
+        if "tts" not in st.session_state:
+            st.session_state.tts = build_tts()
+        if "stt" not in st.session_state:
+            st.session_state.stt = build_stt()
+
+        from bridge import workflow as _wf
+        _wf._vector_store = None
+        _wf._cached_alignment = None
+
+        init_services(
+            llm=st.session_state.llm,
+            store=st.session_state.store,
+            jira=st.session_state.jira,
+        )
+        st.session_state.services_ready = True
+        st.session_state["_loaded_project"] = _active_project
+
+    _loading_placeholder.empty()
+else:
+    if "store" not in st.session_state:
+        st.session_state.store = ProjectStateStore()
+    if "llm" not in st.session_state:
+        st.session_state.llm = build_llm_client()
+    if "jira" not in st.session_state:
+        st.session_state.jira = JiraAdapter(st.session_state.store)
+    if "tts" not in st.session_state:
+        st.session_state.tts = build_tts()
+    if "stt" not in st.session_state:
+        st.session_state.stt = build_stt()
+
+    init_services(
+        llm=st.session_state.llm,
+        store=st.session_state.store,
+        jira=st.session_state.jira,
+    )
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_result" not in st.session_state:
@@ -43,26 +103,12 @@ if "active_ticket_key" not in st.session_state:
 if "last_audio" not in st.session_state:
     st.session_state.last_audio = None
 
-if "services_ready" not in st.session_state:
-    with st.spinner("Loading chat module — preparing knowledge base..."):
-        init_services(
-            llm=st.session_state.llm,
-            store=st.session_state.store,
-            jira=st.session_state.jira,
-        )
-        st.session_state.services_ready = True
-else:
-    init_services(
-        llm=st.session_state.llm,
-        store=st.session_state.store,
-        jira=st.session_state.jira,
-    )
-
 workflow = compile_workflow()
 
-# Ensure tickets are seeded from data sources
-_data = get_scenario(DEFAULT_SCENARIO)
-st.session_state.jira.ensure_seed_tickets(_data)
+# Ensure tickets are seeded from data sources (bundled scenario only)
+if not _active_project.startswith("github_"):
+    _data = get_scenario(DEFAULT_SCENARIO)
+    st.session_state.jira.ensure_seed_tickets(_data)
 
 
 def _get_recent_history(role: Role, hours: int = 1):
@@ -129,7 +175,7 @@ def _run_turn(prompt_text: str):
             result = workflow.invoke({
                 "user_message": prompt_text,
                 "role": role.value,
-                "scenario_id": DEFAULT_SCENARIO,
+                "scenario_id": _active_project,
             })
     response = result.get("final_response", result.get("raw_response", ""))
     st.session_state.last_result = result
@@ -298,18 +344,24 @@ if st.session_state.last_result:
 st.markdown('<div style="color: #e30613; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">Chat</div>', unsafe_allow_html=True)
 
 # Show active context
+_project_label = ""
+if _active_project.startswith("github_"):
+    _gh = st.session_state.get("github_repo", ("", ""))
+    _project_label = f" | Project: **{_gh[0]}/{_gh[1]}** (GitHub)"
+else:
+    _project_label = " | Project: **FlexiLoan**"
+
 active_key = st.session_state.active_ticket_key
 if active_key:
     ticket = st.session_state.jira.get_ticket(active_key)
     if ticket:
         st.caption(
-            f"Role: **{role_label}** | Ticket: **{ticket.key}** — {ticket.title} | "
-            f"Status: **{ticket.status}**"
+            f"Role: **{role_label}**{_project_label} | Ticket: **{ticket.key}** — {ticket.title}"
         )
     else:
-        st.caption(f"Role: **{role_label}**")
+        st.caption(f"Role: **{role_label}**{_project_label}")
 else:
-    st.caption(f"Role: **{role_label}**")
+    st.caption(f"Role: **{role_label}**{_project_label}")
 
 # Show/hide history button — context-sensitive to active ticket
 _all_convos = st.session_state.store.get_conversations(role)
@@ -374,7 +426,7 @@ with col_mic:
         format="webm",
     )
 with col_chat:
-    prompt = st.chat_input("Ask about alignment, discrepancies, tickets, or request a report...")
+    prompt = st.chat_input("Ask about functionalities, code, tickets or request a report...")
 
 # Handle mic recording — track audio ID to avoid reprocessing on rerun
 if audio and audio.get("bytes"):
