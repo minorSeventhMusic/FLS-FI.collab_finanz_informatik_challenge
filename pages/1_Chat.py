@@ -82,7 +82,7 @@ def _history_to_messages(convos):
 
 
 _AVATAR_USER = "personas_pictures/Sparkasse_flipped.svg"
-_AVATAR_ASSISTANT = "personas_pictures/Sparkasse.svg"
+_AVATAR_ASSISTANT = "personas_pictures/Sparkasse_avatar.svg"
 
 
 def _run_turn(prompt_text: str):
