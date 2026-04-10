@@ -124,18 +124,13 @@ def _run_turn(prompt_text: str):
 
         st.write_stream(_stream_words(response))
 
-        # Hidden audio autoplay — no visible player, no download button
-        if audio_bytes:
-            import base64
-            b64 = base64.b64encode(audio_bytes).decode()
-            st.markdown(
-                f'<audio autoplay><source src="data:audio/mp3;base64,{b64}"></audio>',
-                unsafe_allow_html=True,
-            )
-
     st.session_state.messages.append({"kind": "assistant", "content": response})
     st.session_state.last_result = result
-    st.session_state.last_audio = None
+
+    # Play audio after the message bubble — use st.audio which handles
+    # browser autoplay policies better than raw HTML audio tags
+    if audio_bytes:
+        st.audio(audio_bytes, format="audio/mp3", autoplay=True)
 
     # Auto-select newly created ticket in sidebar
     if result.get("jira_action") == "create":
