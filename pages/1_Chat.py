@@ -30,8 +30,11 @@ _needs_init = "services_ready" not in st.session_state or st.session_state.get("
 if _needs_init:
     _loading_placeholder = st.empty()
 
-    # Fetch GitHub files if needed
-    if st.session_state.get("github_repo") and _active_project.startswith("github_"):
+    _is_github = st.session_state.get("github_repo") and _active_project.startswith("github_")
+
+    # Fetch GitHub files + hold spinner until user sees the toast
+    if _is_github:
+        import time as _init_time
         with _loading_placeholder, st.spinner("Connecting to GitHub repository..."):
             from bridge.github_client import fetch_repo_files, repo_files_to_dict
             from bridge.scenarios import build_github_scenario
@@ -40,7 +43,8 @@ if _needs_init:
             if _files:
                 _file_dict = repo_files_to_dict(_files)
                 build_github_scenario(_file_dict, _owner, _repo)
-                st.toast(f"Fetched {len(_files)} files from GitHub", icon="\u2705")
+            st.toast(f"Fetched {len(_files) if _files else 0} files from GitHub", icon="\u2705")
+            _init_time.sleep(2)  # Hold so user sees the GitHub connection message
 
     # Build knowledge base
     with _loading_placeholder, st.spinner("Loading chat module — preparing knowledge base..."):
