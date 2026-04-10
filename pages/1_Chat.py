@@ -36,14 +36,16 @@ if _needs_init:
     if _is_github:
         import time as _init_time
         with _loading_placeholder, st.spinner("Connecting to GitHub repository..."):
-            from bridge.github_client import fetch_repo_files, repo_files_to_dict
+            from bridge.github_client import fetch_repo_files, repo_files_to_dict, fetch_commits, commits_to_text
             from bridge.scenarios import build_github_scenario
             _owner, _repo = st.session_state["github_repo"]
             _files = fetch_repo_files(_owner, _repo)
+            _commits = fetch_commits(_owner, _repo)
             if _files:
                 _file_dict = repo_files_to_dict(_files)
-                build_github_scenario(_file_dict, _owner, _repo)
-            st.toast(f"Fetched {len(_files) if _files else 0} files from GitHub", icon="\u2705")
+                _commit_text = commits_to_text(_commits) if _commits else ""
+                build_github_scenario(_file_dict, _owner, _repo, commit_history=_commit_text)
+            st.toast(f"Fetched {len(_files) if _files else 0} files and {len(_commits)} commits from GitHub", icon="\u2705")
             _init_time.sleep(2)  # Hold so user sees the GitHub connection message
 
     # Build knowledge base

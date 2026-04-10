@@ -16,6 +16,7 @@ def build_github_scenario(
     repo_files: Dict[str, str],
     owner: str,
     repo: str,
+    commit_history: str = "",
 ) -> ScenarioBundle:
     """Build a lightweight scenario from live GitHub repo files."""
     # Extract README as business context if available
@@ -25,11 +26,13 @@ def build_github_scenario(
             readme = content
             break
 
-    # Use all files as technical documentation
+    # Use all files as technical documentation + commit history
     tech_doc = "\n\n".join(
         f"=== {path} ===\n{content[:2000]}"
         for path, content in repo_files.items()
     )
+    if commit_history:
+        tech_doc += f"\n\n=== GIT COMMIT HISTORY ===\n{commit_history}"
 
     scenario = ScenarioBundle(
         scenario_id=f"github_{owner}_{repo}",
@@ -37,7 +40,7 @@ def build_github_scenario(
         description=f"Live repository from GitHub: {owner}/{repo}",
         repo_files=repo_files,
         business_requirements=readme or f"Repository: {owner}/{repo}. No README found.",
-        technical_documentation=tech_doc[:5000],
+        technical_documentation=tech_doc[:8000],
         jira_tickets=[],
         stakeholder_comms="",
         persona_conflicts="",

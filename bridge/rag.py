@@ -102,13 +102,29 @@ def build_chunks_from_scenario(scenario) -> List[Chunk]:
             text=f"File: {path}\n{content[:2000]}",
         ))
 
-    # Technical documentation — as one chunk
+    # Technical documentation — as one chunk (excluding commit history)
     if scenario.technical_documentation:
-        chunks.append(Chunk(
-            id="tech-doc",
-            label="Technical Documentation",
-            text=scenario.technical_documentation[:2000],
-        ))
+        tech_text = scenario.technical_documentation
+        # Split out git history into its own chunk if present
+        if "GIT COMMIT HISTORY" in tech_text:
+            parts = tech_text.split("=== GIT COMMIT HISTORY ===")
+            chunks.append(Chunk(
+                id="tech-doc",
+                label="Technical Documentation",
+                text=parts[0].strip()[:2000],
+            ))
+            if len(parts) > 1 and parts[1].strip():
+                chunks.append(Chunk(
+                    id="git-history",
+                    label="Git Commit History",
+                    text=parts[1].strip()[:3000],
+                ))
+        else:
+            chunks.append(Chunk(
+                id="tech-doc",
+                label="Technical Documentation",
+                text=tech_text[:2000],
+            ))
 
     # Jira tickets — one per ticket
     for t in scenario.jira_tickets:

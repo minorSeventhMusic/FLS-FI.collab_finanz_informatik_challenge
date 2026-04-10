@@ -91,7 +91,12 @@
 
 **Switch to:** Tobias Klein (Business Analyst)
 
-### Question 12: Validate and close
+### Question 12: Check recent changes
+> What recent changes have been made to the calculator? Who last modified it?
+
+*Expected: Lists recent git commits with authors, dates, and files changed. Shows the system can answer questions about repository history. (Requires GitHub project to be selected — switch via landing page if needed.)*
+
+### Question 13: Validate and close
 > The loan term calculation has been implemented and tested. Please mark JIRA-104 as done.
 
 *Expected: JIRA-104 updated to Done. Sidebar reflects the new status. The full lifecycle is complete — from requirement to implementation to closure, across 5 different stakeholder perspectives.*

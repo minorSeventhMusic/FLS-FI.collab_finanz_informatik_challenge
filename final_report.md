@@ -3,7 +3,7 @@
 ## 1. Test Results
 
 ```
-49 passed, 5 skipped, 0 failed
+54 passed, 5 skipped, 0 failed
 ```
 
 | Test Suite | Tests | Status |
@@ -15,6 +15,7 @@
 | test_persistence.py | 6 | All pass |
 | test_personas.py | 7 | All pass |
 | test_speech.py | 10 | All pass |
+| test_github.py | 5 | All pass |
 | test_workflow.py | 7 | All pass |
 
 GitHub integration verified — fetches 4 files from `skleinke/ChefTreffHackFIChallenge_v2`.
@@ -73,9 +74,9 @@ Minor issues found:
 | V2.0 Loan Term Calculation scenario | **FULLY MET** | Section 8 of business requirements with acceptance criteria |
 | Working prototype | **FULLY MET** | 49 tests passing, fully functional |
 | Explain code changes (git diffs) | **PARTIALLY MET** | Can explain code state, not git diffs |
-| Repository answers questions about history | **NOT MET** | No git log/blame integration |
+| Repository answers questions about history | **FULLY MET** | Git commits fetched via GitHub API, indexed in RAG |
 
-**Score: 13 fully met, 1 partially, 1 not met out of 15**
+**Score: 14 fully met, 1 partially, 0 not met out of 15**
 
 ---
 
@@ -104,7 +105,7 @@ Minor issues found:
 |---|---|
 | Python files | 43 |
 | Lines of code | 4,956 |
-| Test files | 8 (54 test cases) |
+| Test files | 9 (59 test cases) |
 | Personas | 7 (unique photos, voices, bios) |
 | ElevenLabs voices | 7 unique |
 | RAG chunks indexed | 25+ |
@@ -117,7 +118,7 @@ Minor issues found:
 
 | Aspect | Ready? |
 |---|---|
-| Demo script (demo.md) | 12 questions, 5 acts, 5 personas |
+| Demo script (demo.md) | 13 questions, 5 acts, 5 personas |
 | FlexiLoan scenario | Full lifecycle with stakeholder lie detection |
 | GitHub live scenario | Real repo fetched via API |
 | Voice I/O | STT + TTS with per-persona voices |
@@ -130,7 +131,7 @@ Minor issues found:
 
 ## 8. Verdict
 
-**Readiness: 8.5/10**
+**Readiness: 9/10**
 
 ### Strengths
 - Working end-to-end prototype, not a mockup
@@ -142,7 +143,6 @@ Minor issues found:
 
 ### Known Limitations (acceptable for hackathon)
 - 26s startup time (spinner shown)
-- No git history queries
 - Prompt injection possible (standard for LLM prototypes)
 - JSON persistence not concurrent-safe (single-user demo)
 
