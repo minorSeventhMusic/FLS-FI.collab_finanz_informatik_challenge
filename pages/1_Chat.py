@@ -90,15 +90,17 @@ def _run_turn(prompt_text: str):
     with st.chat_message("user"):
         st.markdown(prompt_text)
 
-    # Show spinner inside the assistant bubble, then the response
+    import random
+    import time
+
+    # Spinner while LLM thinks
+    _verbs = [
+        "thinking", "pondering", "contemplating", "rummaging",
+        "investigating", "deliberating", "analyzing", "scrutinizing",
+        "deciphering", "connecting", "correlating", "untangling",
+        "assembling", "cross-checking", "synthesizing",
+    ]
     with st.chat_message("assistant"):
-        import random
-        _verbs = [
-            "thinking", "pondering", "contemplating", "rummaging",
-            "investigating", "deliberating", "analyzing", "scrutinizing",
-            "deciphering", "connecting", "correlating", "untangling",
-            "assembling", "cross-checking", "synthesizing",
-        ]
         with st.spinner(f"FI.collab is {random.choice(_verbs)}..."):
             result = workflow.invoke({
                 "user_message": prompt_text,
@@ -106,10 +108,34 @@ def _run_turn(prompt_text: str):
                 "scenario_id": DEFAULT_SCENARIO,
             })
         response = result.get("final_response", result.get("raw_response", ""))
-        st.markdown(response)
+
+        # Generate TTS in parallel with text display prep
+        audio_bytes = b""
+        if voice_responses and response:
+            persona = get_persona(role)
+            voice_id = persona.voice_id or get_voice_id(role.value)
+            audio_bytes = st.session_state.tts.synthesize(response, voice_id)
+
+        # Typewriter effect — stream text word by word
+        def _stream_words(text):
+            for word in text.split(" "):
+                yield word + " "
+                time.sleep(0.03)
+
+        st.write_stream(_stream_words(response))
+
+        # Hidden audio autoplay — no visible player, no download button
+        if audio_bytes:
+            import base64
+            b64 = base64.b64encode(audio_bytes).decode()
+            st.markdown(
+                f'<audio autoplay><source src="data:audio/mp3;base64,{b64}"></audio>',
+                unsafe_allow_html=True,
+            )
 
     st.session_state.messages.append({"kind": "assistant", "content": response})
     st.session_state.last_result = result
+    st.session_state.last_audio = None
 
     # Auto-select newly created ticket in sidebar
     if result.get("jira_action") == "create":
@@ -119,19 +145,6 @@ def _run_turn(prompt_text: str):
                 st.session_state.active_ticket_key = jp["key"]
         except json.JSONDecodeError:
             pass
-
-    # Generate TTS audio if voice mode is on
-    if voice_responses and response:
-        persona = get_persona(role)
-        voice_id = persona.voice_id or get_voice_id(role.value)
-        with st.spinner("Generating voice..."):
-            audio_bytes = st.session_state.tts.synthesize(response, voice_id)
-        if audio_bytes:
-            st.session_state.last_audio = audio_bytes
-        else:
-            st.session_state.last_audio = None
-    else:
-        st.session_state.last_audio = None
 
 
 # ── Sidebar ──────────────────────────────────────────────────────────────
@@ -311,10 +324,6 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["kind"]):
         st.markdown(msg["content"])
 
-# Play last audio response if available
-if st.session_state.last_audio:
-    st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
-    st.session_state.last_audio = None
 
 # ── Input area ───────────────────────────────────────────────────────────
 
