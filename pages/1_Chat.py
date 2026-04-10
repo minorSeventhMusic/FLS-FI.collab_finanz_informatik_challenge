@@ -22,34 +22,17 @@ st.set_page_config(page_title="FI.collab — Chat", page_icon="\U0001f91d", layo
 from bridge.styles import inject_shared_css
 inject_shared_css()
 
-if "store" not in st.session_state:
-    st.session_state.store = ProjectStateStore()
-if "llm" not in st.session_state:
-    st.session_state.llm = build_llm_client()
-if "jira" not in st.session_state:
-    st.session_state.jira = JiraAdapter(st.session_state.store)
-if "tts" not in st.session_state:
-    st.session_state.tts = build_tts()
-if "stt" not in st.session_state:
-    st.session_state.stt = build_stt()
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "last_result" not in st.session_state:
-    st.session_state.last_result = None
-if "pending_resume" not in st.session_state:
-    st.session_state.pending_resume = False
-if "active_ticket_key" not in st.session_state:
-    st.session_state.active_ticket_key = None
-if "last_audio" not in st.session_state:
-    st.session_state.last_audio = None
-
-# Determine active project
+# Determine active project early — needed for init check
 _active_project = st.session_state.get("active_project", DEFAULT_SCENARIO)
+_needs_init = "services_ready" not in st.session_state or st.session_state.get("_loaded_project") != _active_project
 
-if "services_ready" not in st.session_state or st.session_state.get("_loaded_project") != _active_project:
-    # Fetch GitHub files if needed (separate spinner)
+# Show loading spinners FIRST, before any other UI renders
+if _needs_init:
+    _loading_placeholder = st.empty()
+
+    # Fetch GitHub files if needed
     if st.session_state.get("github_repo") and _active_project.startswith("github_"):
-        with st.spinner("Connecting to GitHub repository..."):
+        with _loading_placeholder, st.spinner("Connecting to GitHub repository..."):
             from bridge.github_client import fetch_repo_files, repo_files_to_dict
             from bridge.scenarios import build_github_scenario
             _owner, _repo = st.session_state["github_repo"]
@@ -59,8 +42,19 @@ if "services_ready" not in st.session_state or st.session_state.get("_loaded_pro
                 build_github_scenario(_file_dict, _owner, _repo)
                 st.toast(f"Fetched {len(_files)} files from GitHub", icon="\u2705")
 
-    # Build knowledge base (embedding + alignment)
-    with st.spinner("Loading chat module — preparing knowledge base..."):
+    # Build knowledge base
+    with _loading_placeholder, st.spinner("Loading chat module — preparing knowledge base..."):
+        if "store" not in st.session_state:
+            st.session_state.store = ProjectStateStore()
+        if "llm" not in st.session_state:
+            st.session_state.llm = build_llm_client()
+        if "jira" not in st.session_state:
+            st.session_state.jira = JiraAdapter(st.session_state.store)
+        if "tts" not in st.session_state:
+            st.session_state.tts = build_tts()
+        if "stt" not in st.session_state:
+            st.session_state.stt = build_stt()
+
         from bridge import workflow as _wf
         _wf._vector_store = None
         _wf._cached_alignment = None
@@ -72,12 +66,36 @@ if "services_ready" not in st.session_state or st.session_state.get("_loaded_pro
         )
         st.session_state.services_ready = True
         st.session_state["_loaded_project"] = _active_project
+
+    _loading_placeholder.empty()
 else:
+    if "store" not in st.session_state:
+        st.session_state.store = ProjectStateStore()
+    if "llm" not in st.session_state:
+        st.session_state.llm = build_llm_client()
+    if "jira" not in st.session_state:
+        st.session_state.jira = JiraAdapter(st.session_state.store)
+    if "tts" not in st.session_state:
+        st.session_state.tts = build_tts()
+    if "stt" not in st.session_state:
+        st.session_state.stt = build_stt()
+
     init_services(
         llm=st.session_state.llm,
         store=st.session_state.store,
         jira=st.session_state.jira,
     )
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "last_result" not in st.session_state:
+    st.session_state.last_result = None
+if "pending_resume" not in st.session_state:
+    st.session_state.pending_resume = False
+if "active_ticket_key" not in st.session_state:
+    st.session_state.active_ticket_key = None
+if "last_audio" not in st.session_state:
+    st.session_state.last_audio = None
 
 workflow = compile_workflow()
 
