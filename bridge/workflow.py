@@ -83,7 +83,7 @@ def _extract_ticket_fields(response: str) -> tuple:
     lines = response.strip().split("\n")
 
     title = ""
-    priority = "High"
+    priority = "Medium"
     assignee = ""
 
     for line in lines:

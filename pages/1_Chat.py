@@ -346,20 +346,17 @@ if _is_playing_audio:
 
     pending_text = st.session_state.get("pending_audio_text", "")
 
-    # Play audio and typewriter together inside a single chat bubble
+    # Play audio outside the chat bubble so DOM updates don't interrupt it
+    st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
+
     if pending_text:
         with st.chat_message("assistant", avatar=_AVATAR_ASSISTANT):
-            # Start audio
-            st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
-            # Typewriter text alongside
             def _stream_with_audio(text):
                 for word in text.split(" "):
                     yield word + " "
                     _time.sleep(0.06)
             st.write_stream(_stream_with_audio(pending_text))
         st.session_state.messages.append({"kind": "assistant", "content": pending_text})
-    else:
-        st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
 
     st.session_state.pending_audio = None
     st.session_state.pending_audio_text = None
