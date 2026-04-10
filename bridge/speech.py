@@ -30,12 +30,11 @@ class ElevenLabsTTS:
 
     def synthesize(self, text: str, voice_id: str) -> bytes:
         try:
-            audio_iter = self._client.text_to_speech.stream(
-                voice_id=voice_id,
+            audio_iter = self._client.text_to_speech.convert(
                 text=text,
+                voice_id=voice_id,
                 model_id="eleven_flash_v2_5",
-                output_format="mp3_22050_32",
-                optimize_streaming_latency=3,
+                output_format="mp3_44100_128",
             )
             return b"".join(audio_iter)
         except Exception:
