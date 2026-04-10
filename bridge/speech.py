@@ -108,13 +108,13 @@ class StubSTT:
 # ── Voice mapping ────────────────────────────────────────────────────────
 
 VOICE_MAP = {
-    "business_analyst": "EXAVITQu4vr4xnSDxMaL",   # "Sarah"
-    "developer": "JBFqnCBsd6RMkjVDRZzb",           # "George"
-    "product_manager": "TX3LPaxmHKxFdv7VOQHJ",     # "Liam"
-    "compliance_officer": "XB0fDUnXU5powFXDhCwa",   # "Charlotte"
-    "marketing_manager": "EXAVITQu4vr4xnSDxMaL",   # "Sarah"
-    "risk_analyst": "JBFqnCBsd6RMkjVDRZzb",        # "George"
-    "ux_designer": "TX3LPaxmHKxFdv7VOQHJ",         # "Liam"
+    "business_analyst": "EXAVITQu4vr4xnSDxMaL",   # "Sarah" — Tobias Klein
+    "developer": "JBFqnCBsd6RMkjVDRZzb",           # "George" — Anna Fischer
+    "product_manager": "TX3LPaxmHKxFdv7VOQHJ",     # "Liam" — Daniel Schneider
+    "compliance_officer": "XB0fDUnXU5powFXDhCwa",   # "Charlotte" — Claudia Becker
+    "marketing_manager": "21m00Tcm4TlvDq8ikWAM",   # "Rachel" — Julia Weber
+    "risk_analyst": "pNInz6obpgDQGcFmaJgB",        # "Adam" — Mehmet Yilmaz
+    "ux_designer": "TxGEqnHWrfWFTfGW9XjX",         # "Josh" — Lukas Hoffmann
 }
 
 

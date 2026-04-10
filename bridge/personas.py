@@ -136,7 +136,7 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         visible_doc_types=_BUSINESS_VISIBLE,
         hidden_doc_types=["raw_code", "test_files", "technical_documentation"],
         tone="customer-focused, brand-aware, campaign-oriented",
-        voice_id="EXAVITQu4vr4xnSDxMaL",  # "Sarah"
+        voice_id="21m00Tcm4TlvDq8ikWAM",  # "Rachel"
         picture="personas_pictures/marketing_manager.png",
     ),
     Role.RISK_ANALYST: PersonaConfig(
@@ -156,7 +156,7 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         visible_doc_types=_BUSINESS_VISIBLE + ["technical_documentation"],
         hidden_doc_types=["raw_code", "test_files"],
         tone="analytical, risk-focused, methodical",
-        voice_id="JBFqnCBsd6RMkjVDRZzb",  # "George"
+        voice_id="pNInz6obpgDQGcFmaJgB",  # "Adam"
         picture="personas_pictures/risk_analyst.webp",
     ),
     Role.UX_DESIGNER: PersonaConfig(
@@ -176,7 +176,7 @@ PERSONAS: Dict[Role, PersonaConfig] = {
         visible_doc_types=_BUSINESS_VISIBLE,
         hidden_doc_types=["raw_code", "test_files"],
         tone="user-centered, empathetic, design-focused",
-        voice_id="TX3LPaxmHKxFdv7VOQHJ",  # "Liam"
+        voice_id="TxGEqnHWrfWFTfGW9XjX",  # "Josh"
         picture="personas_pictures/ux_designer.webp",
     ),
 }
