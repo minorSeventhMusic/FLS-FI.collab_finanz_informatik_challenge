@@ -71,27 +71,27 @@
 
 ---
 
-## Act 4 — Business Analyst validates
-
-**Switch to:** Tobias Klein (Business Analyst)
-
-### Question 10: Status check
-> What is the current project status? Are we on track with the loan calculator development?
-
-*Expected: Business-language summary of alignment gaps, open tickets, V2.0 feature status.*
-
-### Question 11: Stakeholder update
-> Can you draft a stakeholder update about the loan term calculation feature?
-
-*Expected: Business-friendly update mentioning the new feature, timeline implications, and dependencies.*
-
----
-
-## Act 5 — Marketing Manager closes the loop
+## Act 4 — Marketing Manager checks launch readiness
 
 **Switch to:** Julia Weber (Marketing Manager)
 
-### Question 12: Close the ticket
+### Question 10: Campaign readiness
+> Is the loan term calculation feature ready? Can we start promoting it to customers?
+
+*Expected: Marketing-language response about feature status, campaign implications, and any blockers.*
+
+### Question 11: Customer messaging
+> How should we communicate the new loan term feature to our customers?
+
+*Expected: Customer-focused messaging suggestions, brand-appropriate language, campaign angle.*
+
+---
+
+## Act 5 — Business Analyst closes the loop
+
+**Switch to:** Tobias Klein (Business Analyst)
+
+### Question 12: Validate and close
 > The loan term calculation has been implemented and tested. Please mark JIRA-104 as done.
 
 *Expected: JIRA-104 updated to Done. Sidebar reflects the new status. The full lifecycle is complete — from requirement to implementation to closure, across 5 different stakeholder perspectives.*
