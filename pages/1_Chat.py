@@ -116,10 +116,7 @@ def _run_turn(prompt_text: str):
             voice_id = persona.voice_id or get_voice_id(role.value)
             audio_bytes = st.session_state.tts.synthesize(response, voice_id)
 
-        if audio_bytes:
-            # Voice on: show text instantly, let audio be the experience
-            st.markdown(response)
-        else:
+        if not audio_bytes:
             # Voice off: typewriter effect
             def _stream_words(text):
                 for word in text.split(" "):
@@ -130,11 +127,13 @@ def _run_turn(prompt_text: str):
     st.session_state.messages.append({"kind": "assistant", "content": response})
     st.session_state.last_result = result
 
-    # Store audio for playback after rerun
+    # Store audio + text for audio-first playback after rerun
     if audio_bytes:
         st.session_state.pending_audio = audio_bytes
+        st.session_state.pending_audio_text = response
     else:
         st.session_state.pending_audio = None
+        st.session_state.pending_audio_text = None
 
     # Auto-select newly created ticket in sidebar
     if result.get("jira_action") == "create":
@@ -324,10 +323,25 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 
-# Play pending audio from last turn (survives rerun)
+# Play pending audio from last turn, then typewriter the text alongside
 if st.session_state.get("pending_audio"):
+    import time as _time
     st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
+    # Typewriter the text while audio plays
+    pending_text = st.session_state.get("pending_audio_text", "")
+    if pending_text:
+        def _stream_with_audio(text):
+            for word in text.split(" "):
+                yield word + " "
+                _time.sleep(0.04)
+        with st.chat_message("assistant"):
+            st.write_stream(_stream_with_audio(pending_text))
+        # Remove the last static message and replace — avoid duplicate
+        if st.session_state.messages and st.session_state.messages[-1]["content"] == pending_text:
+            st.session_state.messages.pop()
+        st.session_state.messages.append({"kind": "assistant", "content": pending_text})
     st.session_state.pending_audio = None
+    st.session_state.pending_audio_text = None
 
 # ── Input area ───────────────────────────────────────────────────────────
 
