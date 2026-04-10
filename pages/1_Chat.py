@@ -43,11 +43,21 @@ if "active_ticket_key" not in st.session_state:
 if "last_audio" not in st.session_state:
     st.session_state.last_audio = None
 
-init_services(
-    llm=st.session_state.llm,
-    store=st.session_state.store,
-    jira=st.session_state.jira,
-)
+if "services_ready" not in st.session_state:
+    with st.spinner("Loading chat module — preparing knowledge base..."):
+        init_services(
+            llm=st.session_state.llm,
+            store=st.session_state.store,
+            jira=st.session_state.jira,
+        )
+        st.session_state.services_ready = True
+else:
+    init_services(
+        llm=st.session_state.llm,
+        store=st.session_state.store,
+        jira=st.session_state.jira,
+    )
+
 workflow = compile_workflow()
 
 # Ensure tickets are seeded from data sources
