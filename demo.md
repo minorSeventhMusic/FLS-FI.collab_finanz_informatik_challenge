@@ -87,6 +87,17 @@
 
 ---
 
+## Act 5 — Marketing Manager closes the loop
+
+**Switch to:** Julia Weber (Marketing Manager)
+
+### Question 12: Close the ticket
+> The loan term calculation has been implemented and tested. Please mark JIRA-104 as done.
+
+*Expected: JIRA-104 updated to Done. Sidebar reflects the new status. The full lifecycle is complete — from requirement to implementation to closure, across 5 different stakeholder perspectives.*
+
+---
+
 ## Key Demo Moments
 
 | Moment | What it shows |
@@ -97,6 +108,7 @@
 | Test cases generated | Automatic test generation (challenge slide 2) |
 | Compliance flags regulations | Multi-stakeholder awareness |
 | Same question, different answers | Persona-adaptive communication |
+| Marketing closes the ticket | Full lifecycle: requirement → implementation → closure |
 | Voice input/output (optional) | "Spoken responses" toggle for wow factor |
 
 ---
