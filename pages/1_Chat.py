@@ -109,20 +109,23 @@ def _run_turn(prompt_text: str):
             })
         response = result.get("final_response", result.get("raw_response", ""))
 
-        # Generate TTS in parallel with text display prep
+        # Generate TTS if spoken responses enabled
         audio_bytes = b""
         if voice_responses and response:
             persona = get_persona(role)
             voice_id = persona.voice_id or get_voice_id(role.value)
             audio_bytes = st.session_state.tts.synthesize(response, voice_id)
 
-        # Typewriter effect — stream text word by word
-        def _stream_words(text):
-            for word in text.split(" "):
-                yield word + " "
-                time.sleep(0.03)
-
-        st.write_stream(_stream_words(response))
+        if audio_bytes:
+            # Voice on: show text instantly, let audio be the experience
+            st.markdown(response)
+        else:
+            # Voice off: typewriter effect
+            def _stream_words(text):
+                for word in text.split(" "):
+                    yield word + " "
+                    time.sleep(0.03)
+            st.write_stream(_stream_words(response))
 
     st.session_state.messages.append({"kind": "assistant", "content": response})
     st.session_state.last_result = result
