@@ -81,8 +81,17 @@ def _history_to_messages(convos):
     return msgs
 
 
-_AVATAR_USER = "personas_pictures/Sparkasse_flipped.svg"
 _AVATAR_ASSISTANT = "personas_pictures/Sparkasse_avatar.svg"
+
+
+def _get_user_avatar():
+    """Return persona picture if available, else flipped Sparkasse logo."""
+    from bridge.personas import PERSONAS
+    role_label = st.session_state.get("current_role", "")
+    for r, p in PERSONAS.items():
+        if p.display_name == role_label and p.picture:
+            return p.picture
+    return "personas_pictures/Sparkasse_flipped.svg"
 
 
 def _run_turn(prompt_text: str):
@@ -91,7 +100,7 @@ def _run_turn(prompt_text: str):
     st.session_state.messages.append({"kind": "user", "content": prompt_text})
 
     # Show the user message immediately
-    with st.chat_message("user", avatar=_AVATAR_USER):
+    with st.chat_message("user", avatar=_get_user_avatar()):
         st.markdown(prompt_text)
 
     import random
