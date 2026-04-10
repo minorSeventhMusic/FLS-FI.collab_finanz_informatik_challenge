@@ -316,23 +316,26 @@ for msg in st.session_state.messages:
 
 
 # Audio-first playback: play audio, then typewriter the text
-if st.session_state.get("pending_audio"):
+_is_playing_audio = bool(st.session_state.get("pending_audio"))
+if _is_playing_audio:
     import time as _time
 
-    # 1. Play audio
-    st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
-
-    # 2. Typewriter the text while audio plays
     pending_text = st.session_state.get("pending_audio_text", "")
+
+    # Play audio and typewriter together inside a single chat bubble
     if pending_text:
-        def _stream_with_audio(text):
-            for word in text.split(" "):
-                yield word + " "
-                _time.sleep(0.04)
         with st.chat_message("assistant"):
+            # Start audio
+            st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
+            # Typewriter text alongside
+            def _stream_with_audio(text):
+                for word in text.split(" "):
+                    yield word + " "
+                    _time.sleep(0.06)
             st.write_stream(_stream_with_audio(pending_text))
-        # Now add to message history (only place this happens for voice responses)
         st.session_state.messages.append({"kind": "assistant", "content": pending_text})
+    else:
+        st.audio(st.session_state.pending_audio, format="audio/mp3", autoplay=True)
 
     st.session_state.pending_audio = None
     st.session_state.pending_audio_text = None
